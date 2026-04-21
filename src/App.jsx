@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from './hooks/useStore.js'
 import { ToastProvider } from './components/Toast.jsx'
+import { Login } from './components/Login.jsx'
 import Clients from './tabs/Clients.jsx'
 import Projects from './tabs/Projects.jsx'
 import Documents from './tabs/Documents.jsx'
@@ -36,6 +37,9 @@ export default function App() {
   const store = useStore()
   const [tab, setTab] = useState('clients')
   const [navTarget, setNavTarget] = useState(null) // { tab, id }
+  const [authed, setAuthed] = useState(() => localStorage.getItem('rs_auth') === '1')
+
+  if (!authed) return <Login onLogin={() => setAuthed(true)} />
 
   function handleNav(targetTab, id) {
     setTab(targetTab)
