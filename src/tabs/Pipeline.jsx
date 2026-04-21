@@ -797,95 +797,54 @@ export default function Pipeline({ store, onNav }) {
       {viewMode === 'list' && (
         <>
           {/* Stage summary cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
-            {stageBreakdown.map(({ stage, count, value, weighted }) => (
-              <div
-                key={stage}
-                onClick={() => setStageFilter(stageFilter === stage ? '' : stage)}
-                style={{
-                  background: stageFilter === stage ? 'var(--bg)' : 'var(--surface)',
-                  border: `1px solid ${stageFilter === stage ? 'var(--ink)' : 'var(--border)'}`,
-                  borderLeft: `3px solid var(--stage-${STAGE_COLORS[stage]})`,
-                  borderRadius: 'var(--radius)',
-                  padding: '16px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.borderColor = 'var(--ink)' }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = stageFilter === stage ? 'var(--bg)' : 'var(--surface)'
-                  e.currentTarget.style.borderColor = stageFilter === stage ? 'var(--ink)' : 'var(--border)'
-                }}
-              >
-                <h3 style={{ margin: '0 0 12px', fontWeight: 600, fontSize: '1rem', fontFamily: 'var(--font-display)', fontStyle: 'normal' }}>{stage}</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <div>
-                    <span className="text-mono" style={{ color: 'var(--ink-muted)', fontSize: '0.65rem' }}>Projects</span>
-                    <p style={{ margin: '2px 0 0', fontWeight: 600, fontSize: '0.9rem' }}>{count}</p>
-                  </div>
-                  <div>
-                    <span className="text-mono" style={{ color: 'var(--ink-muted)', fontSize: '0.65rem' }}>Value</span>
-                    <p className="currency" style={{ margin: '2px 0 0', fontWeight: 600, fontSize: '0.9rem' }}>{fmt(value)}</p>
-                  </div>
-                  {weighted > 0 && (
-                    <div style={{ gridColumn: '1/-1' }}>
-                      <span className="text-mono" style={{ color: 'var(--ink-muted)', fontSize: '0.65rem' }}>Weighted</span>
-                      <p className="currency" style={{ margin: '2px 0 0', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>{fmt(weighted)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Source breakdown */}
-          {Object.keys(sourceBreakdown).length > 0 && (
-            <>
-              <p className="section-label">By Source</p>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 32 }}>
-                {Object.entries(sourceBreakdown).sort((a, b) => b[1].value - a[1].value).map(([src, { count, value }]) => (
-                  <button
-                    key={src}
-                    onClick={() => setSourceFilter(sourceFilter === src ? '' : src)}
-                    className="btn"
-                    style={{
-                      background: sourceFilter === src ? 'var(--ink)' : 'var(--surface)',
-                      color: sourceFilter === src ? 'var(--bg)' : 'inherit',
-                      border: `1px solid ${sourceFilter === src ? 'var(--ink)' : 'var(--border)'}`,
-                      fontSize: '0.8rem', padding: '6px 12px',
-                    }}
-                  >
-                    {src} · {count} · {fmt(value)}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Lead list controls */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <p className="section-label" style={{ margin: 0 }}>
-              {filtered.length} {filtered.length === 1 ? 'lead' : 'leads'}
-              {stageFilter ? ` in ${stageFilter}` : ''}
-              {sourceFilter ? ` via ${sourceFilter}` : ''}
-            </p>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[['stage', 'By Stage'], ['value', 'By Value'], ['chance', 'By Chance'], ['date', 'By Date']].map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setSortBy(key)}
-                  className="btn btn-sm"
-                  style={{
-                    fontSize: '0.75rem', padding: '4px 10px',
-                    background: sortBy === key ? 'var(--ink)' : 'var(--surface)',
-                    color: sortBy === key ? 'var(--bg)' : 'inherit',
-                    border: `1px solid ${sortBy === key ? 'var(--ink)' : 'var(--border)'}`,
-                  }}
-                >
-                  {label}
+          {/* Unified filter + sort bar */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 24 }}>
+            {/* Stage filters */}
+            {['Lead', 'Quoted', 'Confirmed', 'Active'].map(stage => {
+              const active = stageFilter === stage
+              return (
+                <button key={stage} onClick={() => setStageFilter(active ? '' : stage)} className="btn btn-sm" style={{
+                  background: active ? 'var(--ink)' : 'var(--surface)',
+                  color: active ? 'var(--bg)' : 'inherit',
+                  border: `1px solid ${active ? 'var(--ink)' : 'var(--border)'}`,
+                  borderLeft: `3px solid ${STAGE_HEX[stage]}`,
+                  fontSize: '0.78rem', padding: '5px 12px',
+                }}>
+                  {stage}
                 </button>
-              ))}
-            </div>
+              )
+            })}
+
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+            {/* Source filters */}
+            {Object.entries(sourceBreakdown).sort((a, b) => b[1].value - a[1].value).map(([src]) => {
+              const active = sourceFilter === src
+              return (
+                <button key={src} onClick={() => setSourceFilter(active ? '' : src)} className="btn btn-sm" style={{
+                  background: active ? 'var(--ink)' : 'var(--surface)',
+                  color: active ? 'var(--bg)' : 'inherit',
+                  border: `1px solid ${active ? 'var(--ink)' : 'var(--border)'}`,
+                  fontSize: '0.78rem', padding: '5px 12px',
+                }}>
+                  {src}
+                </button>
+              )
+            })}
+
+            <div style={{ flex: 1 }} />
+
+            {/* Sort */}
+            {[['stage', 'Stage'], ['value', 'Value'], ['chance', 'Chance'], ['date', 'Date']].map(([key, label]) => (
+              <button key={key} onClick={() => setSortBy(key)} className="btn btn-sm" style={{
+                fontSize: '0.75rem', padding: '5px 10px',
+                background: sortBy === key ? 'var(--ink)' : 'transparent',
+                color: sortBy === key ? 'var(--bg)' : 'var(--ink-muted)',
+                border: `1px solid ${sortBy === key ? 'var(--ink)' : 'transparent'}`,
+              }}>
+                {label}
+              </button>
+            ))}
           </div>
 
           {filtered.length === 0 ? (
