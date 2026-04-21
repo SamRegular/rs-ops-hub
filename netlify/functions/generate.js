@@ -1,9 +1,14 @@
-export default async (req) => {
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
+exports.handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
 
-  const { prompt } = await req.json()
+  let prompt
+  try {
+    prompt = JSON.parse(event.body).prompt
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) }
+  }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -13,7 +18,7 @@ export default async (req) => {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -21,18 +26,15 @@ export default async (req) => {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    return new Response(JSON.stringify({ error: err.error?.message ?? `API error ${res.status}` }), { status: res.status })
+    return { statusCode: res.status, body: JSON.stringify({ error: err.error?.message ?? `API error ${res.status}` }) }
   }
 
   const data = await res.json()
   const content = data.content?.[0]?.text ?? ''
 
-  return new Response(JSON.stringify({ content }), {
-    status: 200,
+  return {
+    statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
-  })
-}
-
-export const config = {
-  path: '/api/generate',
+    body: JSON.stringify({ content }),
+  }
 }

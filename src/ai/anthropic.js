@@ -1,6 +1,6 @@
 import { STUDIO } from '../config/studio.js'
 
-const PROXY_URL = '/api/generate'
+const PROXY_URL = '/.netlify/functions/generate'
 
 async function callClaude(prompt) {
   const res = await fetch(PROXY_URL, {
