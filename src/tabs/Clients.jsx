@@ -101,9 +101,12 @@ function ClientForm({ initial = {}, onSave, onClose }) {
 
 // ─── Client Detail ────────────────────────────────────────────────────────────
 function ClientDetail({ client, projects, documents, onBack, onEdit, onDelete, onNav }) {
-  const ltv = documents
-    .filter(d => d.type === 'invoice' && d.clientId === client.id && d.status === 'paid')
-    .reduce((s, d) => s + (d.total ?? 0), 0)
+  const ltv = projects
+    .filter(p => p.clientId === client.id && p.status === 'Active')
+    .reduce((s, p) => {
+      if (p.paymentTranches?.length) return s + p.paymentTranches.reduce((ts, t) => ts + (Number(t.amount) || 0), 0)
+      return s + (p.phases ?? []).reduce((ps, ph) => ps + (Number(ph.value) || 0), 0)
+    }, 0)
 
   const clientProjects = projects.filter(p => p.clientId === client.id)
   const clientDocs = documents.filter(d => d.clientId === client.id)

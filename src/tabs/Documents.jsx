@@ -187,7 +187,41 @@ function PaymentSummarySection({ amount, vat, total, currency, poNumber }) {
   )
 }
 
-function InvestmentSection({ lineItems, subtotal, vat, total, depositPercent, deposit, balance, currency }) {
+function InvestmentSection({ lineItems, deliverables, paymentTranches, subtotal, vat, total, depositPercent, deposit, balance, currency }) {
+  const fmtMonth = (m) => m ? new Date(m + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—'
+
+  // New-style: paymentTranches
+  if (paymentTranches?.length) {
+    const trancheTotal = paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+    const trancheVat = trancheTotal * 0.2
+    return (
+      <div className="dp-static-section">
+        {deliverables?.length > 0 && (
+          <>
+            <h2 className="dp-h2">Phases &amp; Deliverables</h2>
+            <ul className="dp-list" style={{ marginBottom: 20 }}>
+              {deliverables.map((d, i) => <li key={i}>{d.name}</li>)}
+            </ul>
+          </>
+        )}
+        <h2 className="dp-h2">Payment Structure</h2>
+        <div className="dp-kv-block">
+          {paymentTranches.map((t, i) => (
+            <div key={i} className="dp-kv">
+              <span className="dp-kv-label">{t.label || `Tranche ${i + 1}`} — {fmtMonth(t.month)}</span>
+              <span className="dp-kv-value">{fmt(Number(t.amount), currency)}</span>
+            </div>
+          ))}
+          <div className="dp-kv dp-kv-sub"><span className="dp-kv-label">Subtotal (ex VAT)</span><span className="dp-kv-value">{fmt(trancheTotal, currency)}</span></div>
+          <div className="dp-kv"><span className="dp-kv-label">VAT (20%)</span><span className="dp-kv-value">{fmt(trancheVat, currency)}</span></div>
+          <div className="dp-kv dp-kv-total"><span className="dp-kv-label">Total Investment</span><span className="dp-kv-value">{fmt(trancheTotal + trancheVat, currency)}</span></div>
+        </div>
+        <p className="dp-para dp-terms-para" style={{ marginTop: 12 }}>Payment terms: Net 30 days from invoice date. Invoices issued at each payment milestone.</p>
+      </div>
+    )
+  }
+
+  // Legacy: line items
   return (
     <div className="dp-static-section">
       <h2 className="dp-h2">Deliverables &amp; Investment</h2>
@@ -202,7 +236,6 @@ function InvestmentSection({ lineItems, subtotal, vat, total, depositPercent, de
         <div className="dp-kv"><span className="dp-kv-label">VAT (20%)</span><span className="dp-kv-value">{fmt(vat, currency)}</span></div>
         <div className="dp-kv dp-kv-total"><span className="dp-kv-label">Total Investment</span><span className="dp-kv-value">{fmt(total, currency)}</span></div>
       </div>
-
       <h2 className="dp-h2" style={{ marginTop: 24 }}>Payment Structure</h2>
       <div className="dp-kv-block">
         <div className="dp-kv"><span className="dp-kv-label">Deposit ({depositPercent}%) — due on commencement</span><span className="dp-kv-value">{fmt(deposit, currency)}</span></div>
@@ -330,6 +363,8 @@ function DocumentPaper({ doc, client, project }) {
             : renderDocContent(doc.content)}
           <InvestmentSection
             lineItems={doc.lineItems}
+            deliverables={doc.deliverables}
+            paymentTranches={doc.paymentTranches}
             subtotal={doc.subtotal}
             vat={doc.vat}
             total={doc.total}
@@ -828,52 +863,79 @@ function DocumentDetail({ doc, clients, projects, store, onBack }) {
 
 function CreateQuoteModal({ clients, store, onClose, onCreated }) {
   const toast = useToast()
-  const [client, setClient] = useState('')
-  const [project, setProject] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [projectMode, setProjectMode] = useState('existing') // 'existing' | 'new'
+  const [existingProjectId, setExistingProjectId] = useState('')
+  const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectType, setNewProjectType] = useState('')
   const [brief, setBrief] = useState('')
-  const [lineItems, setLineItems] = useState([{ id: crypto.randomUUID(), desc: '', qty: 1, unitPrice: 0 }])
-  const [depositPercent, setDepositPercent] = useState(50)
+  const [deliverables, setDeliverables] = useState([{ id: crypto.randomUUID(), name: '' }])
+  const [paymentTranches, setPaymentTranches] = useState([{ id: crypto.randomUUID(), label: 'Deposit', month: '', amount: '' }])
   const [validityDays, setValidityDays] = useState(30)
   const [notes, setNotes] = useState('')
   const [generating, setGenerating] = useState(false)
 
-  const selectedClient = clients.find(c => c.id === client)
-  const addLine = () => setLineItems(prev => [...prev, { id: crypto.randomUUID(), desc: '', qty: 1, unitPrice: 0 }])
-  const removeLine = (id) => setLineItems(prev => prev.filter(l => l.id !== id))
-  const setLine = (id, k, v) => setLineItems(prev => prev.map(l => l.id === id ? { ...l, [k]: v } : l))
+  const selectedClient = clients.find(c => c.id === clientId)
+  const clientProjects = clientId ? store.projects.filter(p => p.clientId === clientId) : []
+  const selectedProject = store.projects.find(p => p.id === existingProjectId)
 
-  const subtotal = lineItems.reduce((s, l) => s + (Number(l.qty) * Number(l.unitPrice)), 0)
-  const vat = subtotal * 0.2
-  const total = subtotal + vat
+  const addDeliverable = () => setDeliverables(prev => [...prev, { id: crypto.randomUUID(), name: '' }])
+  const removeDeliverable = (id) => setDeliverables(prev => prev.filter(d => d.id !== id))
+  const setDeliverable = (id, v) => setDeliverables(prev => prev.map(d => d.id === id ? { ...d, name: v } : d))
+
+  const addTranche = () => setPaymentTranches(prev => [...prev, { id: crypto.randomUUID(), label: '', month: '', amount: '' }])
+  const removeTranche = (id) => setPaymentTranches(prev => prev.filter(t => t.id !== id))
+  const setTranche = (id, k, v) => setPaymentTranches(prev => prev.map(t => t.id === id ? { ...t, [k]: v } : t))
+
+  const total = paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+  const vat = total * 0.2
+  const grandTotal = total + vat
+
+  const projectName = projectMode === 'existing' ? (selectedProject?.name || '') : newProjectName
 
   async function handleGenerate() {
-    if (!client) { toast('Select a client', 'error'); return }
+    if (!clientId) { toast('Select a client', 'error'); return }
+    if (projectMode === 'new' && !newProjectName.trim()) { toast('Enter a project name', 'error'); return }
     setGenerating(true)
     try {
+      // Create new project if needed
+      let projectId = existingProjectId || null
+      if (projectMode === 'new') {
+        const newProject = await store.createProject({
+          name: newProjectName,
+          clientId,
+          projectType: newProjectType,
+          status: 'Quoted',
+          brief,
+          deliverables,
+          paymentTranches,
+        })
+        projectId = newProject.id
+      }
+
       const result = await generateQuote({
         client: selectedClient,
-        project: { name: project || 'Project', brief, projectType: '' },
-        lineItems,
-        depositPercent,
+        project: { name: projectName || 'Project', brief, projectType: newProjectType },
+        deliverables,
+        paymentTranches,
         validityDays,
         notes,
       })
+
       const doc = await store.createDocument({
         type: 'quote',
-        clientId: client,
-        projectId: null,
-        projectName: project || 'Custom Quote',
+        clientId,
+        projectId,
+        projectName: projectName || 'Custom Quote',
         status: 'draft',
-        lineItems,
-        depositPercent,
+        deliverables,
+        paymentTranches,
         validityDays,
         overview: result.overview,
-        content: result.overview, // backwards compat
-        subtotal: result.subtotal,
-        vat: result.vat,
-        total: result.total,
-        deposit: result.deposit,
-        balance: result.balance,
+        content: result.overview,
+        subtotal: total,
+        vat,
+        total: grandTotal,
         validUntil: result.validUntil,
         notes,
       })
@@ -896,78 +958,99 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
         </div>
       ) : (
         <>
-          <div className="form-grid form-grid-2">
-            <div className="form-group" style={{ gridColumn: '1/-1' }}>
-              <label className="form-label">Client *</label>
-              <select className="form-select" value={client} onChange={e => setClient(e.target.value)}>
-                <option value="">— Select client —</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ''}</option>)}
+          {/* Client */}
+          <div className="form-group">
+            <label className="form-label">Client *</label>
+            <select className="form-select" value={clientId} onChange={e => { setClientId(e.target.value); setExistingProjectId('') }}>
+              <option value="">— Select client —</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ''}</option>)}
+            </select>
+          </div>
+
+          {/* Project */}
+          <div className="form-group">
+            <label className="form-label">Project</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              {['existing', 'new'].map(mode => (
+                <button key={mode} type="button" className="btn btn-sm"
+                  style={{ background: projectMode === mode ? 'var(--ink)' : 'var(--surface)', color: projectMode === mode ? 'var(--bg)' : 'inherit', border: `1px solid ${projectMode === mode ? 'var(--ink)' : 'var(--border)'}`, fontSize: '0.8rem' }}
+                  onClick={() => setProjectMode(mode)}>
+                  {mode === 'existing' ? 'Existing Project' : 'New Project'}
+                </button>
+              ))}
+            </div>
+            {projectMode === 'existing' ? (
+              <select className="form-select" value={existingProjectId} onChange={e => setExistingProjectId(e.target.value)} disabled={!clientId}>
+                <option value="">— Select project —</option>
+                {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-            </div>
-            <div className="form-group" style={{ gridColumn: '1/-1' }}>
-              <label className="form-label">Project / Description</label>
-              <input className="form-input" placeholder="e.g., Brand Refresh, Website Redesign" value={project} onChange={e => setProject(e.target.value)} />
-            </div>
-            <div className="form-group" style={{ gridColumn: '1/-1' }}>
-              <label className="form-label">Brief (used for the overview paragraph)</label>
-              <textarea className="form-textarea" rows={2} placeholder="Short description of what you're designing and why…" value={brief} onChange={e => setBrief(e.target.value)} />
-            </div>
+            ) : (
+              <div className="form-grid form-grid-2">
+                <input className="form-input" placeholder="Project name *" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} />
+                <input className="form-input" placeholder="Project type (e.g. Brand Identity)" value={newProjectType} onChange={e => setNewProjectType(e.target.value)} />
+              </div>
+            )}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Line Items</label>
-            <div className="line-items-list">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 110px 32px', gap: 8, marginBottom: 4 }}>
-                <span className="form-label">Description</span>
-                <span className="form-label">Qty</span>
-                <span className="form-label">Unit Price (£)</span>
-                <span />
-              </div>
-              {lineItems.map(l => (
-                <div key={l.id} className="line-item-row">
-                  <input className="form-input" placeholder="Description" value={l.desc} onChange={e => setLine(l.id, 'desc', e.target.value)} />
-                  <input className="form-input" type="number" min="1" value={l.qty} onChange={e => setLine(l.id, 'qty', e.target.value)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
-                  <input className="form-input" type="number" min="0" step="50" value={l.unitPrice} onChange={e => setLine(l.id, 'unitPrice', e.target.value)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
-                  <button className="btn btn-ghost btn-sm" onClick={() => removeLine(l.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}><Trash2 size={14} /></button>
-                </div>
-              ))}
-              <button className="btn btn-ghost btn-sm" onClick={addLine} style={{ marginTop: 4 }}><Plus size={13} /> Add Line</button>
-            </div>
+            <label className="form-label">Brief</label>
+            <textarea className="form-textarea" rows={2} placeholder="Short description of what you're designing and why…" value={brief} onChange={e => setBrief(e.target.value)} />
           </div>
 
-          <div style={{ display: 'flex', gap: 16, padding: '12px 0', borderTop: '1px solid var(--border)' }}>
-            <span style={{ flex: 1 }} />
-            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 48, fontSize: '0.85rem' }}>
-                <span className="text-muted">Subtotal</span><span className="currency">{fmt(subtotal)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 48, fontSize: '0.85rem' }}>
-                <span className="text-muted">VAT (20%)</span><span className="currency">{fmt(vat)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 48, fontWeight: 600 }}>
-                <span>Total</span><span className="currency">{fmt(total)}</span>
-              </div>
+          {/* Deliverables */}
+          <div className="form-group">
+            <label className="form-label">Phases & Deliverables</label>
+            <div className="phases-list">
+              {deliverables.map(d => (
+                <div key={d.id} style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 6 }}>
+                  <input className="form-input" placeholder="Deliverable name" value={d.name} onChange={e => setDeliverable(d.id, e.target.value)} />
+                  <button className="btn btn-ghost btn-sm" onClick={() => removeDeliverable(d.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}><Trash2 size={14} /></button>
+                </div>
+              ))}
             </div>
+            <button className="btn btn-ghost btn-sm" onClick={addDeliverable} style={{ marginTop: 4 }}><Plus size={13} /> Add Deliverable</button>
+          </div>
+
+          {/* Payment Structure */}
+          <div className="form-group">
+            <label className="form-label">Payment Structure</label>
+            {paymentTranches.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 6 }}>
+                <span className="form-label">Label</span><span className="form-label">Month</span><span className="form-label">Amount (£ ex VAT)</span><span />
+              </div>
+            )}
+            {paymentTranches.map(t => (
+              <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                <input className="form-input" placeholder="e.g. Deposit" value={t.label} onChange={e => setTranche(t.id, 'label', e.target.value)} />
+                <input className="form-input" type="month" value={t.month} onChange={e => setTranche(t.id, 'month', e.target.value)} />
+                <input className="form-input" type="number" min="0" step="100" placeholder="0" value={t.amount} onChange={e => setTranche(t.id, 'amount', e.target.value)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
+                <button className="btn btn-ghost btn-sm" onClick={() => removeTranche(t.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            <button className="btn btn-ghost btn-sm" onClick={addTranche} style={{ marginTop: 4 }}><Plus size={13} /> Add Tranche</button>
+            {total > 0 && (
+              <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}><span className="text-muted">Total (ex VAT)</span><span className="currency">{fmt(total)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}><span className="text-muted">VAT (20%)</span><span className="currency">{fmt(vat)}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}><span>Grand Total</span><span className="currency">{fmt(grandTotal)}</span></div>
+              </div>
+            )}
           </div>
 
           <div className="form-grid form-grid-2">
-            <div className="form-group">
-              <label className="form-label">Deposit %</label>
-              <input className="form-input" type="number" min="0" max="100" value={depositPercent} onChange={e => setDepositPercent(Number(e.target.value))} />
-            </div>
             <div className="form-group">
               <label className="form-label">Validity (days)</label>
               <input className="form-input" type="number" min="1" value={validityDays} onChange={e => setValidityDays(Number(e.target.value))} />
             </div>
             <div className="form-group" style={{ gridColumn: '1/-1' }}>
               <label className="form-label">Additional Notes (optional)</label>
-              <textarea className="form-textarea" rows={2} placeholder="Any notes to include at the end of the document…" value={notes} onChange={e => setNotes(e.target.value)} />
+              <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
             <button className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn btn-accent" onClick={handleGenerate} disabled={!client}><FileText size={14} /> Generate</button>
+            <button className="btn btn-accent" onClick={handleGenerate} disabled={!clientId}><FileText size={14} /> Generate</button>
           </div>
         </>
       )}
@@ -985,18 +1068,24 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
   const [brief, setBrief] = useState('')
   const [projectType, setProjectType] = useState('')
   const [startDate, setStartDate] = useState('')
-  const [phases, setPhases] = useState([{ id: crypto.randomUUID(), name: '', value: '' }])
+  const [deliverables, setDeliverables] = useState([{ id: crypto.randomUUID(), name: '' }])
+  const [paymentTranches, setPaymentTranches] = useState([{ id: crypto.randomUUID(), label: 'Deposit', month: '', amount: '' }])
   const [notes, setNotes] = useState('')
   const [generating, setGenerating] = useState(false)
 
   const selectedClient = clients.find(c => c.id === client)
   const selectedProject = projects.find(p => p.id === project)
   const clientProjects = client ? projects.filter(p => p.clientId === client) : []
-  const addPhase = () => setPhases(prev => [...prev, { id: crypto.randomUUID(), name: '', value: '', dueDate: '' }])
-  const removePhase = (id) => setPhases(prev => prev.filter(p => p.id !== id))
-  const setPhase = (id, k, v) => setPhases(prev => prev.map(p => p.id === id ? { ...p, [k]: v } : p))
 
-  const total = phases.reduce((s, p) => s + (Number(p.value) || 0), 0)
+  const addDeliverable = () => setDeliverables(prev => [...prev, { id: crypto.randomUUID(), name: '' }])
+  const removeDeliverable = (id) => setDeliverables(prev => prev.filter(d => d.id !== id))
+  const setDeliverable = (id, v) => setDeliverables(prev => prev.map(d => d.id === id ? { ...d, name: v } : d))
+
+  const addTranche = () => setPaymentTranches(prev => [...prev, { id: crypto.randomUUID(), label: '', month: '', amount: '' }])
+  const removeTranche = (id) => setPaymentTranches(prev => prev.filter(t => t.id !== id))
+  const setTranche = (id, k, v) => setPaymentTranches(prev => prev.map(t => t.id === id ? { ...t, [k]: v } : t))
+
+  const total = paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
 
   async function handleGenerate() {
     if (!client) { toast('Select a client', 'error'); return }
@@ -1004,7 +1093,7 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
     try {
       const result = await generateSOW({
         client: selectedClient,
-        project: { name: projectName || 'Project', brief, phases, projectType, startDate },
+        project: { name: projectName || 'Project', brief, deliverables, paymentTranches, projectType, startDate },
         notes,
       })
       const doc = await store.createDocument({
@@ -1014,7 +1103,8 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
         projectName: selectedProject?.name || projectName || 'SOW',
         status: 'draft',
         content: result.content,
-        phases: result.phases,
+        deliverables,
+        paymentTranches,
         total: result.totalValue,
         vat: result.vat,
         startDate,
@@ -1073,26 +1163,38 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Phases &amp; Deliverables</label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginBottom: 8 }}>Each phase name becomes a defined term in the SOW Definitions section.</p>
+            <label className="form-label">Deliverables</label>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginBottom: 8 }}>List what will be delivered. Each becomes a defined term in the SOW.</p>
             <div className="phases-list">
-              {phases.map(p => (
-                <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 40px', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-                  <input className="form-input" placeholder="Phase / deliverable name" value={p.name} onChange={e => setPhase(p.id, 'name', e.target.value)} />
-                  <input className="form-input" placeholder="£ value" type="number" min="0" step="100" value={p.value} onChange={e => setPhase(p.id, 'value', e.target.value)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
-                  <input className="form-input" placeholder="Due date" type="date" value={p.dueDate} onChange={e => setPhase(p.id, 'dueDate', e.target.value)} />
-                  <button className="btn btn-ghost btn-sm" onClick={() => removePhase(p.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}>
-                    <Trash2 size={14} />
-                  </button>
+              {deliverables.map(d => (
+                <div key={d.id} style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 6 }}>
+                  <input className="form-input" placeholder="Deliverable name" value={d.name} onChange={e => setDeliverable(d.id, e.target.value)} />
+                  <button className="btn btn-ghost btn-sm" onClick={() => removeDeliverable(d.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}><Trash2 size={14} /></button>
                 </div>
               ))}
             </div>
-            <button className="btn btn-ghost btn-sm" onClick={addPhase} style={{ marginTop: 8 }}>
-              <Plus size={13} /> Add Phase
-            </button>
-            {phases.length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={addDeliverable} style={{ marginTop: 4 }}><Plus size={13} /> Add Deliverable</button>
+          </div>
+
+          <div className="form-group" style={{ marginTop: 8 }}>
+            <label className="form-label">Payment Structure</label>
+            {paymentTranches.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 6 }}>
+                <span className="form-label">Label</span><span className="form-label">Month</span><span className="form-label">Amount (£ ex VAT)</span><span />
+              </div>
+            )}
+            {paymentTranches.map(t => (
+              <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                <input className="form-input" placeholder="e.g. Deposit" value={t.label} onChange={e => setTranche(t.id, 'label', e.target.value)} />
+                <input className="form-input" type="month" value={t.month} onChange={e => setTranche(t.id, 'month', e.target.value)} />
+                <input className="form-input" type="number" min="0" step="100" placeholder="0" value={t.amount} onChange={e => setTranche(t.id, 'amount', e.target.value)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
+                <button className="btn btn-ghost btn-sm" onClick={() => removeTranche(t.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            <button className="btn btn-ghost btn-sm" onClick={addTranche} style={{ marginTop: 4 }}><Plus size={13} /> Add Tranche</button>
+            {total > 0 && (
               <div className="phase-total">
-                <span className="text-mono" style={{ color: 'var(--ink-muted)' }}>Total Value</span>
+                <span className="text-mono" style={{ color: 'var(--ink-muted)' }}>Total (ex VAT)</span>
                 <span className="currency" style={{ fontWeight: 500 }}>{fmt(total)}</span>
               </div>
             )}

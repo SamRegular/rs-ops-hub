@@ -21,46 +21,66 @@ function Badge({ stage }) {
   return <span className={`badge badge-${STAGE_COLORS[stage] ?? key}`}>{stage}</span>
 }
 
-// ─── Phase Editor ─────────────────────────────────────────────────────────────
-function PhaseEditor({ phases, onChange }) {
-  const add = () => onChange([...phases, { id: crypto.randomUUID(), name: '', value: '' }])
-  const remove = (id) => onChange(phases.filter(p => p.id !== id))
-  const set = (id, k, v) => onChange(phases.map(p => p.id === id ? { ...p, [k]: v } : p))
-  const total = phases.reduce((s, p) => s + (Number(p.value) || 0), 0)
+// ─── Deliverables Editor ──────────────────────────────────────────────────────
+function DeliverablesEditor({ deliverables, onChange }) {
+  const add = () => onChange([...deliverables, { id: crypto.randomUUID(), name: '' }])
+  const remove = (id) => onChange(deliverables.filter(d => d.id !== id))
+  const set = (id, v) => onChange(deliverables.map(d => d.id === id ? { ...d, name: v } : d))
 
   return (
     <div>
       <div className="phases-list">
-        {phases.map(p => (
-          <div key={p.id} className="phase-row">
-            <input
-              className="form-input"
-              placeholder="Phase name"
-              value={p.name}
-              onChange={e => set(p.id, 'name', e.target.value)}
-            />
-            <input
-              className="form-input"
-              placeholder="£ value"
-              type="number"
-              min="0"
-              step="100"
-              value={p.value}
-              onChange={e => set(p.id, 'value', e.target.value)}
-              style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
-            />
-            <button className="btn btn-ghost btn-sm" onClick={() => remove(p.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}>
+        {deliverables.map(d => (
+          <div key={d.id} style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 6 }}>
+            <input className="form-input" placeholder="Deliverable name" value={d.name} onChange={e => set(d.id, e.target.value)} />
+            <button className="btn btn-ghost btn-sm" onClick={() => remove(d.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}>
               <Trash size={14} />
             </button>
           </div>
         ))}
       </div>
       <button className="btn btn-ghost btn-sm" onClick={add} style={{ marginTop: 8 }}>
-        <Plus size={13} /> Add Phase
+        <Plus size={13} /> Add Deliverable
       </button>
-      {phases.length > 0 && (
+    </div>
+  )
+}
+
+// ─── Payment Tranches Editor ───────────────────────────────────────────────────
+function PaymentTranchesEditor({ tranches, onChange }) {
+  const add = () => onChange([...tranches, { id: crypto.randomUUID(), label: '', month: '', amount: '' }])
+  const remove = (id) => onChange(tranches.filter(t => t.id !== id))
+  const set = (id, k, v) => onChange(tranches.map(t => t.id === id ? { ...t, [k]: v } : t))
+  const total = tranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+
+  return (
+    <div>
+      {tranches.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 6 }}>
+          <span className="form-label">Label</span>
+          <span className="form-label">Month</span>
+          <span className="form-label">Amount (£)</span>
+          <span />
+        </div>
+      )}
+      <div className="phases-list">
+        {tranches.map(t => (
+          <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+            <input className="form-input" placeholder="e.g. Deposit" value={t.label} onChange={e => set(t.id, 'label', e.target.value)} />
+            <input className="form-input" type="month" value={t.month} onChange={e => set(t.id, 'month', e.target.value)} />
+            <input className="form-input" type="number" min="0" step="100" placeholder="0" value={t.amount} onChange={e => set(t.id, 'amount', e.target.value)} style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }} />
+            <button className="btn btn-ghost btn-sm" onClick={() => remove(t.id)} style={{ padding: '4px', color: 'var(--ink-muted)' }}>
+              <Trash size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <button className="btn btn-ghost btn-sm" onClick={add} style={{ marginTop: 8 }}>
+        <Plus size={13} /> Add Tranche
+      </button>
+      {tranches.length > 0 && (
         <div className="phase-total">
-          <span className="text-mono" style={{ color: 'var(--ink-muted)' }}>Total Project Value</span>
+          <span className="text-mono" style={{ color: 'var(--ink-muted)' }}>Total</span>
           <span className="currency" style={{ fontWeight: 500 }}>{fmt(total)}</span>
         </div>
       )}
@@ -72,9 +92,10 @@ function PhaseEditor({ phases, onChange }) {
 function ProjectForm({ initial = {}, clients, onSave, onClose }) {
   const [form, setForm] = useState({
     name: '', clientId: '', projectType: '', status: 'Lead',
-    brief: '', startDate: '', phases: [],
+    brief: '', startDate: '',
     ...initial,
-    phases: (initial.phases ?? []).map(p => ({ ...p })),
+    deliverables: (initial.deliverables ?? initial.phases?.map(p => ({ id: p.id, name: p.name })) ?? []).map(d => ({ ...d })),
+    paymentTranches: (initial.paymentTranches ?? []).map(t => ({ ...t })),
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -140,8 +161,14 @@ function ProjectForm({ initial = {}, clients, onSave, onClose }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Phases & Milestones</label>
-        <PhaseEditor phases={form.phases} onChange={v => set('phases', v)} />
+        <label className="form-label">Deliverables</label>
+        <DeliverablesEditor deliverables={form.deliverables} onChange={v => set('deliverables', v)} />
+      </div>
+
+      <div className="form-group" style={{ marginTop: 16 }}>
+        <label className="form-label">Payment Structure</label>
+        <p style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', marginBottom: 8 }}>Define when payments are due. These inform the cash flow timeline.</p>
+        <PaymentTranchesEditor tranches={form.paymentTranches} onChange={v => set('paymentTranches', v)} />
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 4 }}>
@@ -204,27 +231,41 @@ function ProjectDetail({ project, clients, store, onBack, onEdit, onDelete, onNa
         )}
       </div>
 
-      {/* Phases */}
-      {project.phases?.length > 0 && (
+      {/* Deliverables */}
+      {(project.deliverables?.length > 0 || project.phases?.length > 0) && (
         <>
-          <p className="section-label">Phases & Milestones</p>
+          <p className="section-label">Deliverables</p>
+          <ul style={{ marginBottom: 24, paddingLeft: 20 }}>
+            {(project.deliverables ?? project.phases?.map(p => ({ id: p.id, name: p.name })) ?? []).map(d => (
+              <li key={d.id} style={{ fontSize: '0.9rem', marginBottom: 4 }}>{d.name}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* Payment Structure */}
+      {project.paymentTranches?.length > 0 && (
+        <>
+          <p className="section-label">Payment Structure</p>
           <div className="table-wrap" style={{ marginBottom: 32 }}>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Phase</th>
-                  <th>Value (ex VAT)</th>
+                  <th>Tranche</th>
+                  <th>Month</th>
+                  <th>Amount (ex VAT)</th>
                 </tr>
               </thead>
               <tbody>
-                {project.phases.map(p => (
-                  <tr key={p.id} style={{ cursor: 'default' }}>
-                    <td style={{ fontWeight: 500 }}>{p.name}</td>
-                    <td className="currency">{fmt(Number(p.value || 0))}</td>
+                {project.paymentTranches.map((t, i) => (
+                  <tr key={t.id} style={{ cursor: 'default' }}>
+                    <td style={{ fontWeight: 500 }}>{t.label || `Tranche ${i + 1}`}</td>
+                    <td>{t.month ? new Date(t.month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—'}</td>
+                    <td className="currency">{fmt(Number(t.amount || 0))}</td>
                   </tr>
                 ))}
                 <tr style={{ cursor: 'default', background: 'var(--bg)' }}>
-                  <td style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.65rem', color: 'var(--ink-muted)' }}>Total</td>
+                  <td colSpan={2} style={{ fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.65rem', color: 'var(--ink-muted)' }}>Total</td>
                   <td className="currency" style={{ fontWeight: 600 }}>{fmt(total)}</td>
                 </tr>
               </tbody>

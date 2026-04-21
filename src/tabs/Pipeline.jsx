@@ -460,9 +460,6 @@ function SankeyView({ leads }) {
 
 // ─── Timeline View ────────────────────────────────────────────────────────────
 function TimelineView({ leads, clients }) {
-  const withDates = leads.filter(p => p.expectedCloseDate)
-  const withoutDates = leads.filter(p => !p.expectedCloseDate)
-
   if (leads.length === 0) {
     return (
       <div className="empty-state">
@@ -472,23 +469,36 @@ function TimelineView({ leads, clients }) {
     )
   }
 
-  // Build month range: always at least current month + 5 ahead; extend if leads fall outside
   const today = new Date()
   const defaultStart = new Date(today.getFullYear(), today.getMonth(), 1)
   const defaultEnd = new Date(today.getFullYear(), today.getMonth() + 5, 1)
 
+  // Build timeline events: use paymentTranches if available, else expectedCloseDate
+  // Each event: { project, month: 'YYYY-MM', amount }
+  const timelineEvents = leads.flatMap(p => {
+    if (p.paymentTranches?.length) {
+      return p.paymentTranches
+        .filter(t => t.month)
+        .map(t => ({ project: p, month: t.month, amount: Number(t.amount) || 0, trancheLabel: t.label }))
+    }
+    if (p.expectedCloseDate) {
+      const d = new Date(p.expectedCloseDate)
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      return [{ project: p, month, amount: projectValue(p), trancheLabel: null }]
+    }
+    return []
+  })
+
+  // Build month range
   let rangeStart = defaultStart
   let rangeEnd = defaultEnd
 
-  if (withDates.length > 0) {
-    const dates = withDates.map(p => new Date(p.expectedCloseDate))
-    const minDate = new Date(Math.min(...dates))
-    const maxDate = new Date(Math.max(...dates))
-    const leadsStart = new Date(minDate.getFullYear(), minDate.getMonth(), 1)
-    const leadsEnd = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1)
-    if (leadsStart < rangeStart) rangeStart = leadsStart
-    if (leadsEnd > rangeEnd) rangeEnd = leadsEnd
-  }
+  timelineEvents.forEach(({ month }) => {
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m - 1, 1)
+    if (d < rangeStart) rangeStart = d
+    if (d > rangeEnd) rangeEnd = d
+  })
 
   const months = []
   const cursor = new Date(rangeStart)
@@ -497,18 +507,20 @@ function TimelineView({ leads, clients }) {
     cursor.setMonth(cursor.getMonth() + 1)
   }
 
-  // Group leads by month
-  const mkKey = (d) => `${d.getFullYear()}-${d.getMonth()}`
+  // Group events by YYYY-MM key
+  const mkKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   const byMonth = Object.fromEntries(months.map(m => [mkKey(m), []]))
-  withDates.forEach(p => {
-    const key = mkKey(new Date(p.expectedCloseDate))
-    if (byMonth[key]) byMonth[key].push(p)
+  timelineEvents.forEach(ev => {
+    if (byMonth[ev.month]) byMonth[ev.month].push(ev)
   })
 
   const monthValues = Object.fromEntries(
-    Object.entries(byMonth).map(([k, ps]) => [k, ps.reduce((s, p) => s + projectValue(p), 0)])
+    Object.entries(byMonth).map(([k, evs]) => [k, evs.reduce((s, ev) => s + ev.amount, 0)])
   )
   const maxVal = Math.max(...Object.values(monthValues), 1)
+
+  // Leads with no date and no tranches
+  const withoutDates = leads.filter(p => !p.paymentTranches?.some(t => t.month) && !p.expectedCloseDate)
 
   return (
     <div>
@@ -560,7 +572,7 @@ function TimelineView({ leads, clients }) {
       <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start' }}>
         {months.map(m => {
           const key = mkKey(m)
-          const monthLeads = byMonth[key] || []
+          const monthEvents = byMonth[key] || []
           const monthValue = monthValues[key] || 0
           const label = m.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
           const isCurrent = m.getFullYear() === today.getFullYear() && m.getMonth() === today.getMonth()
@@ -575,70 +587,46 @@ function TimelineView({ leads, clients }) {
                 borderRadius: '4px 4px 0 0',
                 padding: '10px 12px',
               }}>
-                <div style={{
-                  fontFamily: 'var(--font-mono)', fontSize: '0.63rem',
-                  textTransform: 'uppercase', letterSpacing: '0.1em',
-                  color: isCurrent ? 'var(--accent)' : 'var(--ink-muted)',
-                }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.63rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: isCurrent ? 'var(--accent)' : 'var(--ink-muted)' }}>
                   {label}{isCurrent ? ' · Now' : ''}
                 </div>
                 {monthValue > 0 && (
-                  <div style={{
-                    fontFamily: 'var(--font-mono)', fontWeight: 700,
-                    fontSize: '0.92rem', marginTop: 4,
-                    color: isPast ? 'var(--ink-muted)' : 'var(--ink)',
-                  }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.92rem', marginTop: 4, color: isPast ? 'var(--ink-muted)' : 'var(--ink)' }}>
                     {fmt(monthValue)}
                   </div>
                 )}
                 <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', marginTop: 2 }}>
-                  {monthLeads.length} lead{monthLeads.length !== 1 ? 's' : ''}
+                  {monthEvents.length} payment{monthEvents.length !== 1 ? 's' : ''}
                 </div>
               </div>
 
-              {/* Lead cards */}
-              <div style={{
-                border: `1px solid ${isCurrent ? 'var(--accent)' : 'var(--border)'}`,
-                borderTop: 'none',
-                borderRadius: '0 0 4px 4px',
-                padding: monthLeads.length > 0 ? 8 : 0,
-                minHeight: 40,
-              }}>
-                {monthLeads.length === 0 ? (
+              {/* Cards */}
+              <div style={{ border: `1px solid ${isCurrent ? 'var(--accent)' : 'var(--border)'}`, borderTop: 'none', borderRadius: '0 0 4px 4px', padding: monthEvents.length > 0 ? 8 : 0, minHeight: 40 }}>
+                {monthEvents.length === 0 ? (
                   <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--border-dark)', fontSize: '0.9rem' }}>—</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {monthLeads.sort((a, b) => {
-                      const stageOrder = { Confirmed: 0, Quoted: 1, Lead: 2 }
-                      const stageCmp = (stageOrder[a.status] ?? 3) - (stageOrder[b.status] ?? 3)
-                      if (stageCmp !== 0) return stageCmp
-                      return projectValue(b) - projectValue(a)
-                    }).map(p => {
-                      const client = clients.find(c => c.id === p.clientId)
-                      const val = projectValue(p)
-                      return (
-                        <div key={p.id} style={{
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border)',
-                          borderLeft: `3px solid ${STAGE_HEX[p.status] ?? '#888'}`,
-                          borderRadius: 'var(--radius)',
-                          padding: '8px 10px',
-                          opacity: isPast ? 0.55 : 1,
-                        }}>
-                          <p style={{ margin: 0, fontWeight: 600, fontSize: '0.8rem', lineHeight: 1.3 }}>{p.name}</p>
-                          {client && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: 'var(--ink-muted)' }}>{client.company || client.name}</p>}
-                          {val > 0 && (
-                            <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.78rem' }}>{fmt(val)}</p>
-                          )}
-                          <div style={{ display: 'flex', gap: 5, marginTop: 5, alignItems: 'center' }}>
-                            <Badge stage={p.status} />
-                            {p.winChance > 0 && (
-                              <span style={{ fontSize: '0.68rem', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)' }}>{p.winChance}%</span>
-                            )}
+                    {monthEvents
+                      .sort((a, b) => {
+                        const stageOrder = { Confirmed: 0, Quoted: 1, Lead: 2 }
+                        return (stageOrder[a.project.status] ?? 3) - (stageOrder[b.project.status] ?? 3)
+                      })
+                      .map((ev, idx) => {
+                        const p = ev.project
+                        const client = clients.find(c => c.id === p.clientId)
+                        return (
+                          <div key={`${p.id}-${idx}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: `3px solid ${STAGE_HEX[p.status] ?? '#888'}`, borderRadius: 'var(--radius)', padding: '8px 10px', opacity: isPast ? 0.55 : 1 }}>
+                            <p style={{ margin: 0, fontWeight: 600, fontSize: '0.8rem', lineHeight: 1.3 }}>{p.name}</p>
+                            {client && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: 'var(--ink-muted)' }}>{client.company || client.name}</p>}
+                            {ev.trancheLabel && <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)' }}>{ev.trancheLabel}</p>}
+                            {ev.amount > 0 && <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.78rem' }}>{fmt(ev.amount)}</p>}
+                            <div style={{ display: 'flex', gap: 5, marginTop: 5, alignItems: 'center' }}>
+                              <Badge stage={p.status} />
+                              {p.winChance > 0 && <span style={{ fontSize: '0.68rem', color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)' }}>{p.winChance}%</span>}
+                            </div>
                           </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
                   </div>
                 )}
               </div>

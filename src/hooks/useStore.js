@@ -113,12 +113,17 @@ export function useStore() {
 
   // ── Computed ─────────────────────────────────────────────────────────────
   const clientLTV = useCallback((clientId) => {
-    return documents
-      .filter(d => d.type === 'invoice' && d.clientId === clientId && d.status === 'paid')
-      .reduce((s, d) => s + (d.total ?? 0), 0)
-  }, [documents])
+    // Total value of all Active projects for this client
+    return projects
+      .filter(p => p.clientId === clientId && p.status === 'Active')
+      .reduce((s, p) => {
+        if (p.paymentTranches?.length) return s + p.paymentTranches.reduce((ts, t) => ts + (Number(t.amount) || 0), 0)
+        return s + (p.phases ?? []).reduce((ps, ph) => ps + (Number(ph.value) || 0), 0)
+      }, 0)
+  }, [projects])
 
   const projectTotalValue = useCallback((project) => {
+    if (project.paymentTranches?.length) return project.paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
     return (project.phases ?? []).reduce((s, p) => s + (Number(p.value) || 0), 0)
   }, [])
 
