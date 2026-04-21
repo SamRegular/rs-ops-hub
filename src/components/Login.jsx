@@ -20,7 +20,7 @@ export function Login({ onLogin }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', background: 'var(--bg)',
+      height: '100vh', background: '#F5F4F0',
     }}>
       <div style={{
         width: 320,
