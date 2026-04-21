@@ -1,13 +1,20 @@
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) }
+export default async (req) => {
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   let prompt
   try {
-    prompt = JSON.parse(event.body).prompt
+    const body = await req.json()
+    prompt = body.prompt
   } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) }
+    return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -26,15 +33,17 @@ exports.handler = async (event) => {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    return { statusCode: res.status, body: JSON.stringify({ error: err.error?.message ?? `API error ${res.status}` }) }
+    return new Response(
+      JSON.stringify({ error: err.error?.message ?? `API error ${res.status}` }),
+      { status: res.status, headers: { 'Content-Type': 'application/json' } }
+    )
   }
 
   const data = await res.json()
   const content = data.content?.[0]?.text ?? ''
 
-  return {
-    statusCode: 200,
+  return new Response(JSON.stringify({ content }), {
+    status: 200,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
-  }
+  })
 }
