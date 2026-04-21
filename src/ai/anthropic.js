@@ -1,6 +1,6 @@
 import { STUDIO } from '../config/studio.js'
 
-const PROXY_URL = 'http://localhost:3002/api/generate'
+const PROXY_URL = '/api/generate'
 
 async function callClaude(prompt) {
   const res = await fetch(PROXY_URL, {
