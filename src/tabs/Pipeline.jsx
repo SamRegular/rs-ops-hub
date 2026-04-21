@@ -4,16 +4,17 @@ import { Modal } from '../components/Modal.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { SOURCES, PROJECT_TYPES, SECTORS } from '../config/studio.js'
 
-const LEAD_STAGES = ['Lead', 'Quoted', 'Confirmed']
+const LEAD_STAGES = ['Lead', 'Quoted', 'Confirmed', 'Active']
 
 const STAGE_COLORS = {
-  Lead: 'lead', Quoted: 'quoted', Confirmed: 'confirmed',
+  Lead: 'lead', Quoted: 'quoted', Confirmed: 'confirmed', Active: 'confirmed',
 }
 
 const STAGE_HEX = {
   Lead: '#8E8E93',
   Quoted: '#60A5FA',
   Confirmed: '#34D399',
+  Active: '#34D399',
 }
 
 function fmt(n) {
@@ -895,7 +896,7 @@ export default function Pipeline({ store, onNav }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               {['Confirmed', 'Quoted', 'Lead'].map(stage => {
-                const stageLeads = filtered.filter(p => p.status === stage)
+                const stageLeads = filtered.filter(p => stage === 'Confirmed' ? (p.status === 'Confirmed' || p.status === 'Active') : p.status === stage)
                 if (stageLeads.length === 0) return null
                 return (
                   <div key={stage}>
