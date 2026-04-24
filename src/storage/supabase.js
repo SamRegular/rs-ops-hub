@@ -25,6 +25,7 @@ const TABLE_NAMES = {
 async function getTeamId() {
   try {
     const { data: { user } } = await supabase.auth.getUser()
+    console.log('Current user:', user?.id, user?.email)
     if (!user) throw new Error('Not authenticated')
 
     const { data, error } = await supabase
@@ -33,13 +34,16 @@ async function getTeamId() {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    console.log('Team lookup result:', { data, error })
+
     if (error) {
       console.error('Team lookup error:', error)
       throw error
     }
 
     if (!data?.team_id) {
-      throw new Error('User not in any team. Please contact admin.')
+      console.error('User not found in team_members table. User ID:', user.id)
+      throw new Error(`User ${user.email} not in any team. Please contact admin.`)
     }
 
     return data.team_id
