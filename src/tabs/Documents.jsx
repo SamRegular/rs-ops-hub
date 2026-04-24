@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, Send, CheckCircle, XCircle, Trash2, CheckSquare, Plus, FileText, BookOpen, Receipt } from 'lucide-react'
 import { Modal } from '../components/Modal.jsx'
 import { useToast } from '../components/Toast.jsx'
@@ -878,6 +878,18 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
   const selectedClient = clients.find(c => c.id === clientId)
   const clientProjects = clientId ? store.projects.filter(p => p.clientId === clientId) : []
   const selectedProject = store.projects.find(p => p.id === existingProjectId)
+
+  // Auto-populate deliverables and paymentTranches when existing project is selected
+  useEffect(() => {
+    if (existingProjectId && selectedProject) {
+      if (selectedProject.deliverables?.length > 0) {
+        setDeliverables(selectedProject.deliverables.map(d => ({ id: crypto.randomUUID(), name: d.name })))
+      }
+      if (selectedProject.paymentTranches?.length > 0) {
+        setPaymentTranches(selectedProject.paymentTranches.map(t => ({ id: crypto.randomUUID(), ...t })))
+      }
+    }
+  }, [existingProjectId, selectedProject])
 
   const addDeliverable = () => setDeliverables(prev => [...prev, { id: crypto.randomUUID(), name: '' }])
   const removeDeliverable = (id) => setDeliverables(prev => prev.filter(d => d.id !== id))

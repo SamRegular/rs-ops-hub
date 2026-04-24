@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from './hooks/useStore.js'
 import { ToastProvider } from './components/Toast.jsx'
 import { Login } from './components/Login.jsx'
@@ -6,11 +6,12 @@ import Clients from './tabs/Clients.jsx'
 import Projects from './tabs/Projects.jsx'
 import Documents from './tabs/Documents.jsx'
 import Pipeline from './tabs/Pipeline.jsx'
+import { storage } from './storage/index.js'
 
 const TABS = ['clients', 'projects', 'documents', 'pipeline']
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
-function Nav({ active, onTab }) {
+function Nav({ active, onTab, onLogout }) {
   return (
     <nav className="nav">
       <div className="nav-brand">
@@ -28,6 +29,13 @@ function Nav({ active, onTab }) {
           </li>
         ))}
       </ul>
+      <button
+        className="btn"
+        style={{ marginRight: 16, fontSize: '0.85rem' }}
+        onClick={onLogout}
+      >
+        Log out
+      </button>
     </nav>
   )
 }
@@ -37,9 +45,34 @@ export default function App() {
   const store = useStore()
   const [tab, setTab] = useState('clients')
   const [navTarget, setNavTarget] = useState(null) // { tab, id }
-  const [authed, setAuthed] = useState(() => localStorage.getItem('rs_auth') === '1')
+  const [authed, setAuthed] = useState(false)
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    // Check auth state on mount
+    storage.getUser().then(user => {
+      setAuthed(!!user)
+      setChecking(false)
+    }).catch(() => {
+      setChecking(false)
+    })
+  }, [])
+
+  if (checking) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: 16 }}>
+        <div className="spinner" />
+        <span className="mono" style={{ color: 'var(--ink-muted)' }}>Loading</span>
+      </div>
+    )
+  }
 
   if (!authed) return <Login onLogin={() => setAuthed(true)} />
+
+  async function handleLogout() {
+    await storage.signOut()
+    setAuthed(false)
+  }
 
   function handleNav(targetTab, id) {
     setTab(targetTab)
@@ -72,7 +105,7 @@ export default function App() {
   return (
     <ToastProvider>
       <div className="app-shell">
-        <Nav active={tab} onTab={handleTab} />
+        <Nav active={tab} onTab={handleTab} onLogout={handleLogout} />
         <main className="content-area">
           {tab === 'clients'    && <Clients   store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'clients'} />}
           {tab === 'projects'   && <Projects  store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'projects'} />}

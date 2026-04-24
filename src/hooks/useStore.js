@@ -17,17 +17,30 @@ export function useStore() {
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
-    const [c, p, d, r] = await Promise.all([
-      storage.getAll('clients'),
-      storage.getAll('projects'),
-      storage.getAll('documents'),
-      storage.getAll('retainers'),
-    ])
-    setClients(c)
-    setProjects(p)
-    setDocuments(d)
-    setRetainers(r)
-    setLoading(false)
+    try {
+      const [c, p, d, r] = await Promise.all([
+        storage.getAll('clients'),
+        storage.getAll('projects'),
+        storage.getAll('documents'),
+        storage.getAll('retainers'),
+      ])
+
+      // Add empty deliverables and paymentTranches to projects
+      const enrichedProjects = p.map(project => ({
+        ...project,
+        deliverables: project.deliverables || [],
+        paymentTranches: project.paymentTranches || [],
+      }))
+
+      setClients(c)
+      setProjects(enrichedProjects)
+      setDocuments(d)
+      setRetainers(r)
+      setLoading(false)
+    } catch (err) {
+      console.error('Error loading data:', err)
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { reload() }, [reload])
@@ -52,18 +65,82 @@ export function useStore() {
 
   // ── Projects ─────────────────────────────────────────────────────────────
   const createProject = useCallback(async (data) => {
-    const item = await storage.create('projects', data)
-    setProjects(prev => [...prev, item])
-    return item
+    const { deliverables = [], paymentTranches = [], ...projectData } = data
+    const item = await storage.create('projects', projectData)
+
+    // Save deliverables
+    const supabase = storage.supabase
+    if (deliverables.length > 0) {
+      await supabase.from('deliverables').insert(
+        deliverables.map(d => ({
+          projectId: item.id,
+          name: d.name,
+        }))
+      )
+    }
+
+    // Save payment tranches
+    if (paymentTranches.length > 0) {
+      await supabase.from('payment_tranches').insert(
+        paymentTranches.map(t => ({
+          projectId: item.id,
+          label: t.label,
+          month: t.month,
+          amount: t.amount,
+        }))
+      )
+    }
+
+    const enriched = {
+      ...item,
+      deliverables,
+      paymentTranches,
+    }
+    setProjects(prev => [...prev, enriched])
+    return enriched
   }, [])
 
   const updateProject = useCallback(async (id, data) => {
-    const item = await storage.update('projects', id, data)
-    setProjects(prev => prev.map(p => p.id === id ? item : p))
-    return item
+    const { deliverables = [], paymentTranches = [], ...projectData } = data
+    const item = await storage.update('projects', id, projectData)
+
+    const supabase = storage.supabase
+
+    // Delete and recreate deliverables
+    await supabase.from('deliverables').delete().eq('projectId', id)
+    if (deliverables.length > 0) {
+      await supabase.from('deliverables').insert(
+        deliverables.map(d => ({
+          projectId: id,
+          name: d.name,
+        }))
+      )
+    }
+
+    // Delete and recreate payment tranches
+    await supabase.from('payment_tranches').delete().eq('projectId', id)
+    if (paymentTranches.length > 0) {
+      await supabase.from('payment_tranches').insert(
+        paymentTranches.map(t => ({
+          projectId: id,
+          label: t.label,
+          month: t.month,
+          amount: t.amount,
+        }))
+      )
+    }
+
+    const enriched = {
+      ...item,
+      deliverables,
+      paymentTranches,
+    }
+    setProjects(prev => prev.map(p => p.id === id ? enriched : p))
+    return enriched
   }, [])
 
   const deleteProject = useCallback(async (id) => {
+    // Cascade delete handled by Supabase foreign keys
     await storage.delete('projects', id)
     setProjects(prev => prev.filter(p => p.id !== id))
   }, [])
