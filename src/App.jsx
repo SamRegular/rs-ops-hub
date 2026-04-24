@@ -29,9 +29,10 @@ function Nav({ active, onTab, onLogout }) {
           </li>
         ))}
       </ul>
+      <div style={{ flex: 1 }} />
       <button
         className="btn"
-        style={{ marginRight: 16, fontSize: '0.85rem' }}
+        style={{ fontSize: '0.75rem', padding: '6px 12px' }}
         onClick={onLogout}
       >
         Log out
