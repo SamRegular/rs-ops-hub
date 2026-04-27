@@ -72,8 +72,14 @@ export const storage = {
 
     const teamId = await getTeamId()
 
+    // Convert empty strings to null for proper database handling
+    const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+      acc[key] = value === '' ? null : value
+      return acc
+    }, {})
+
     const insertData = {
-      ...data,
+      ...cleanData,
       team_id: teamId,
     }
 
