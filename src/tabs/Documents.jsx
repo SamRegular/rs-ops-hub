@@ -1134,9 +1134,14 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
         .filter(d => d.name?.trim())
         .map(({ name }) => ({ name }))
 
+      // Clean payment tranches to remove IDs before saving
+      const cleanPaymentTranches = paymentTranches
+        .filter(t => t.label?.trim() && t.amount)
+        .map(({ label, month, amount }) => ({ label, month, amount }))
+
       const result = await generateSOW({
         client: selectedClient,
-        project: { name: projectName || 'Project', brief, deliverables: cleanDeliverables, paymentTranches, projectType, startDate },
+        project: { name: projectName || 'Project', brief, deliverables: cleanDeliverables, paymentTranches: cleanPaymentTranches, projectType, startDate },
         notes,
       })
       const doc = await store.createDocument({
@@ -1147,7 +1152,7 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
         status: 'sent',
         content: result.content,
         deliverables: cleanDeliverables,
-        paymentTranches,
+        paymentTranches: cleanPaymentTranches,
         total: result.totalValue,
         vat: result.vat,
         startDate,
@@ -1583,8 +1588,21 @@ function EditQuoteForm({ doc, clients, store, onSave }) {
 
 function EditSOWForm({ doc, clients, store, onSave }) {
   const toast = useToast()
-  const [paymentTranches, setPaymentTranches] = useState(doc.paymentTranches ?? [{ id: crypto.randomUUID(), label: 'Tranche 1', month: '', amount: '' }])
-  const [deliverables, setDeliverables] = useState(doc.deliverables ?? [{ id: crypto.randomUUID(), name: '' }])
+
+  // Ensure tranches have IDs for React rendering
+  const initPaymentTranches = (doc.paymentTranches ?? [{ label: 'Tranche 1', month: '', amount: '' }]).map(t => ({
+    ...t,
+    id: t.id || crypto.randomUUID()
+  }))
+
+  // Ensure deliverables have IDs for React rendering
+  const initDeliverables = (doc.deliverables ?? [{ name: '' }]).map(d => ({
+    ...d,
+    id: d.id || crypto.randomUUID()
+  }))
+
+  const [paymentTranches, setPaymentTranches] = useState(initPaymentTranches)
+  const [deliverables, setDeliverables] = useState(initDeliverables)
   const [notes, setNotes] = useState(doc.notes ?? '')
   const [saving, setSaving] = useState(false)
 
@@ -1600,15 +1618,25 @@ function EditSOWForm({ doc, clients, store, onSave }) {
     if (!paymentTranches.some(t => t.label && t.amount)) { toast('Add at least one payment tranche', 'error'); return }
     setSaving(true)
     try {
+      // Clean deliverables to remove IDs
+      const cleanDeliverables = deliverables
+        .filter(d => d.name?.trim())
+        .map(({ name }) => ({ name }))
+
+      // Clean payment tranches to remove IDs
+      const cleanPaymentTranches = paymentTranches
+        .filter(t => t.label?.trim() && t.amount)
+        .map(({ label, month, amount }) => ({ label, month, amount }))
+
       const result = await generateSOW({
         client: clients.find(c => c.id === doc.clientId),
-        project: { name: doc.projectName, paymentTranches, deliverables, startDate: doc.startDate },
+        project: { name: doc.projectName, paymentTranches: cleanPaymentTranches, deliverables: cleanDeliverables, startDate: doc.startDate },
         notes,
       })
       await store.updateDocument(doc.id, {
         content: result.content,
-        paymentTranches,
-        deliverables,
+        paymentTranches: cleanPaymentTranches,
+        deliverables: cleanDeliverables,
         total: result.totalValue,
         vat: result.vat,
         notes,
