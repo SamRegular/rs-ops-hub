@@ -1774,12 +1774,18 @@ function FilingView({ documents, clients, projects, onSelectDoc }) {
                           e.currentTarget.style.background = 'transparent'
                         }}
                       >
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--ink-muted)', minWidth: '70px' }}>{d.invoiceNumber ?? `${d.type?.toUpperCase()}`}</span>
-                        <span style={{ color: 'var(--ink-muted)', marginLeft: 12, minWidth: '50px', fontSize: '0.75rem' }}>{new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                        <span style={{ marginLeft: 12 }}><Badge status={d.status} /></span>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flex: 1 }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--ink-muted)', minWidth: '80px', textAlign: 'left' }}>
+                            {d.invoiceNumber ? `${d.invoiceNumber} /` : ''} {d.type?.toUpperCase()}
+                          </span>
+                          <span style={{ color: 'var(--ink-muted)', fontSize: '0.75rem', minWidth: '50px' }}>
+                            {new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                          <Badge status={d.status} />
+                        </div>
                         {d.total != null && (() => {
                           const exVAT = d.total && d.vat ? d.total - d.vat : d.amount ?? 0
-                          return <span style={{ marginLeft: 'auto', textAlign: 'right', minWidth: '80px' }} className="currency">{fmtWithVAT(exVAT, d.vat)}</span>
+                          return <span style={{ marginLeft: 'auto', textAlign: 'right', minWidth: '100px' }} className="currency">{fmtWithVAT(exVAT, d.vat)}</span>
                         })()}
                       </div>
                     ))}
@@ -1816,7 +1822,8 @@ export default function Documents({ store, initialSelectedId, onNav }) {
     return s + exVAT
   }, 0)
 
-  const invoicesOutstanding = invoices.filter(d => ['draft', 'sent'].includes(d.status))
+  // Outstanding = sent but not paid (excludes draft and rejected)
+  const invoicesOutstanding = invoices.filter(d => d.status === 'sent')
   const outstandingVAT = invoicesOutstanding.reduce((s, d) => s + (d.vat ?? 0), 0)
   const outstandingExVAT = invoicesOutstanding.reduce((s, d) => {
     const exVAT = d.total && d.vat ? d.total - d.vat : d.amount ?? 0
