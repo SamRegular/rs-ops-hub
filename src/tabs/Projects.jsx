@@ -98,7 +98,14 @@ function ProjectForm({ initial = {}, clients, onSave, onClose }) {
     paymentTranches: (initial.paymentTranches ?? []).map(t => ({ ...t })),
   })
 
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k, v) => setForm(f => {
+    const updated = { ...f, [k]: v }
+    // Auto-set win chance to 100% when status changes to Active or Confirmed
+    if (k === 'status' && ['Active', 'Confirmed'].includes(v)) {
+      updated.winChance = 100
+    }
+    return updated
+  })
   const inp = (k) => ({ value: form[k] ?? '', onChange: e => set(k, e.target.value) })
 
   return (
@@ -186,7 +193,7 @@ function ProjectDetail({ project, clients, store, onBack, onEdit, onDelete, onNa
 
   const client = clients.find(c => c.id === project.clientId)
   const projectDocs = store.documents.filter(d => d.projectId === project.id)
-  const total = (project.phases ?? []).reduce((s, p) => s + Number(p.value || 0), 0)
+  const total = (project.paymentTranches ?? []).reduce((s, t) => s + Number(t.amount || 0), 0)
 
   return (
     <div>

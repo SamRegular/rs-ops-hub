@@ -27,6 +27,10 @@ function Badge({ stage }) {
 }
 
 function projectValue(p) {
+  // Support both old phases and new paymentTranches
+  if (p.paymentTranches?.length) {
+    return p.paymentTranches.reduce((s, t) => s + Number(t.amount || 0), 0)
+  }
   return (p.phases ?? []).reduce((s, ph) => s + Number(ph.value || 0), 0)
 }
 
@@ -183,7 +187,8 @@ function LeadForm({ clients, onSave, onClose }) {
 // ─── Lead Card ────────────────────────────────────────────────────────────────
 function LeadCard({ project, client, onClick }) {
   const value = projectValue(project)
-  const winChance = Number(project.winChance) || 0
+  // Auto-set win chance to 100% for Active and Confirmed projects
+  const winChance = ['Active', 'Confirmed'].includes(project.status) ? 100 : (Number(project.winChance) || 0)
   const weighted = value * (winChance / 100)
   const days = daysInPipeline(project)
 
