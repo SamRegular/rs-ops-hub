@@ -6,9 +6,10 @@ import Clients from './tabs/Clients.jsx'
 import Projects from './tabs/Projects.jsx'
 import Documents from './tabs/Documents.jsx'
 import Pipeline from './tabs/Pipeline.jsx'
+import Retainers from './tabs/Retainers.jsx'
 import { storage } from './storage/index.js'
 
-const TABS = ['clients', 'projects', 'documents', 'pipeline']
+const TABS = ['clients', 'projects', 'documents', 'pipeline', 'retainers']
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 function Nav({ active, onTab, onLogout }) {
@@ -112,6 +113,7 @@ export default function App() {
           {tab === 'projects'   && <Projects  store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'projects'} />}
           {tab === 'documents'  && <Documents store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'documents'} />}
           {tab === 'pipeline'   && <Pipeline  store={augmentedStore} onNav={handleNav} key='pipeline' />}
+          {tab === 'retainers'  && <Retainers store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'retainers'} />}
         </main>
       </div>
     </ToastProvider>
