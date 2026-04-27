@@ -593,6 +593,31 @@ function buildPrintHtml(doc, client, project) {
     </div>`
 
   const investmentHtml = (() => {
+    // New-style: paymentTranches
+    if (doc.paymentTranches?.length) {
+      const fmtMonth = (m) => m ? new Date(m + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : '—'
+      const trancheTotal = doc.paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+      const trancheVat = trancheTotal * 0.2
+      return `
+        <div class="dp-static-section">
+          ${doc.deliverables?.length > 0 ? `
+            <h2 class="dp-h2">Phases &amp; Deliverables</h2>
+            <ul class="dp-list" style="margin-bottom: 20px">
+              ${doc.deliverables.map(d => `<li>${esc(d.name)}</li>`).join('')}
+            </ul>
+          ` : ''}
+          <h2 class="dp-h2">Payment Structure</h2>
+          <div class="dp-kv-block">
+            ${doc.paymentTranches.map((t, i) => kvRow(`${t.label || `Tranche ${i + 1}`} — ${fmtMonth(t.month)}`, fmt(Number(t.amount), currency))).join('')}
+            <div class="dp-kv dp-kv-sub"><span class="dp-kv-label">Subtotal (ex VAT)</span><span class="dp-kv-value">${esc(fmt(trancheTotal, currency))}</span></div>
+            ${kvRow('VAT (20%)', fmt(trancheVat, currency))}
+            <div class="dp-kv dp-kv-total"><span class="dp-kv-label">Total Investment</span><span class="dp-kv-value">${esc(fmt(trancheTotal + trancheVat, currency))}</span></div>
+          </div>
+          <p class="dp-para dp-terms-para" style="margin-top:12px">Payment terms: Net 30 days from invoice date. Invoices issued at each payment milestone.</p>
+        </div>`
+    }
+
+    // Legacy: line items
     const items = (doc.lineItems ?? []).map(li =>
       kvRow(li.desc || 'Item', fmt(Number(li.qty) * Number(li.unitPrice), currency))
     ).join('')
@@ -910,6 +935,11 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
     if (projectMode === 'new' && !newProjectName.trim()) { toast('Enter a project name', 'error'); return }
     setGenerating(true)
     try {
+      // Clean deliverables by removing temporary IDs and empty ones
+      const cleanDeliverables = deliverables
+        .filter(d => d.name?.trim())
+        .map(({ name }) => ({ name }))
+
       // Create new project if needed
       let projectId = existingProjectId || null
       if (projectMode === 'new') {
@@ -919,7 +949,7 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
           projectType: newProjectType,
           status: 'Quoted',
           brief,
-          deliverables,
+          deliverables: cleanDeliverables,
           paymentTranches,
         })
         projectId = newProject.id
@@ -928,7 +958,7 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
       const result = await generateQuote({
         client: selectedClient,
         project: { name: projectName || 'Project', brief, projectType: newProjectType },
-        deliverables,
+        deliverables: cleanDeliverables,
         paymentTranches,
         validityDays,
         notes,
@@ -940,7 +970,7 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
         projectId,
         projectName: projectName || 'Custom Quote',
         status: 'draft',
-        deliverables,
+        deliverables: cleanDeliverables,
         paymentTranches,
         validityDays,
         overview: result.overview,
@@ -1103,9 +1133,14 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
     if (!client) { toast('Select a client', 'error'); return }
     setGenerating(true)
     try {
+      // Clean deliverables by removing temporary IDs and empty ones
+      const cleanDeliverables = deliverables
+        .filter(d => d.name?.trim())
+        .map(({ name }) => ({ name }))
+
       const result = await generateSOW({
         client: selectedClient,
-        project: { name: projectName || 'Project', brief, deliverables, paymentTranches, projectType, startDate },
+        project: { name: projectName || 'Project', brief, deliverables: cleanDeliverables, paymentTranches, projectType, startDate },
         notes,
       })
       const doc = await store.createDocument({
@@ -1115,7 +1150,7 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
         projectName: selectedProject?.name || projectName || 'SOW',
         status: 'draft',
         content: result.content,
-        deliverables,
+        deliverables: cleanDeliverables,
         paymentTranches,
         total: result.totalValue,
         vat: result.vat,
@@ -1637,6 +1672,55 @@ function EditSOWForm({ doc, clients, store, onSave }) {
   )
 }
 
+// ─── Filing View ──────────────────────────────────────────────────────────────
+
+function FilingView({ documents, clients, projects, onSelectDoc }) {
+  // Group documents by Client > Month > Project
+  const filing = {}
+
+  documents.forEach(doc => {
+    const client = clients.find(c => c.id === doc.clientId)
+    const clientName = client?.name || 'Unassigned'
+    const month = new Date(doc.createdAt).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+    const project = projects.find(p => p.id === doc.projectId)
+    const projectName = project?.name || doc.projectName || 'General'
+
+    if (!filing[clientName]) filing[clientName] = {}
+    if (!filing[clientName][month]) filing[clientName][month] = {}
+    if (!filing[clientName][month][projectName]) filing[clientName][month][projectName] = []
+    filing[clientName][month][projectName].push(doc)
+  })
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      {Object.entries(filing).map(([clientName, months]) => (
+        <div key={clientName} style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>{clientName}</h3>
+          {Object.entries(months).map(([month, projects]) => (
+            <div key={month} style={{ marginLeft: 16, marginBottom: 16 }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: 8 }}>{month}</p>
+              {Object.entries(projects).map(([projectName, docs]) => (
+                <div key={projectName} style={{ marginLeft: 16 }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: 6 }}>{projectName}</p>
+                  {docs.map(d => (
+                    <div key={d.id} onClick={() => onSelectDoc(d.id)} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: '0.85rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 4, cursor: 'pointer', transition: 'all 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.borderColor = 'var(--ink)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{d.invoiceNumber ?? d.type?.toUpperCase()}</span>
+                      <span style={{ flex: 1, marginLeft: 12 }}><TypeBadge type={d.type} /></span>
+                      <span style={{ color: 'var(--ink-muted)' }}>{new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                      <span style={{ marginLeft: 12, fontWeight: 500 }}><Badge status={d.status} /></span>
+                      {d.total != null && <span style={{ marginLeft: 12, textAlign: 'right', minWidth: '80px' }} className="currency">{fmt(d.total)}</span>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Documents Tab ────────────────────────────────────────────────────────────
 
 export default function Documents({ store, initialSelectedId, onNav }) {
@@ -1645,6 +1729,7 @@ export default function Documents({ store, initialSelectedId, onNav }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [createModal, setCreateModal] = useState(null)
+  const [viewMode, setViewMode] = useState('list') // 'list' or 'filing'
 
   const { documents, clients, projects } = store
 
@@ -1725,6 +1810,11 @@ export default function Documents({ store, initialSelectedId, onNav }) {
           <option value="rejected">Rejected</option>
           <option value="paid">Paid</option>
         </select>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button className={`btn btn-sm ${viewMode === 'list' ? 'btn-active' : ''}`} onClick={() => setViewMode('list')} style={{ fontSize: '0.8rem', padding: '6px 12px', background: viewMode === 'list' ? 'var(--ink)' : 'var(--surface)', color: viewMode === 'list' ? 'var(--bg)' : 'inherit', border: `1px solid ${viewMode === 'list' ? 'var(--ink)' : 'var(--border)'}` }}>List</button>
+          <button className={`btn btn-sm ${viewMode === 'filing' ? 'btn-active' : ''}`} onClick={() => setViewMode('filing')} style={{ fontSize: '0.8rem', padding: '6px 12px', background: viewMode === 'filing' ? 'var(--ink)' : 'var(--surface)', color: viewMode === 'filing' ? 'var(--bg)' : 'inherit', border: `1px solid ${viewMode === 'filing' ? 'var(--ink)' : 'var(--border)'}` }}>Filing</button>
+        </div>
       </div>
 
       {filtered.length === 0
@@ -1733,6 +1823,8 @@ export default function Documents({ store, initialSelectedId, onNav }) {
             <p className="empty-state-title">No documents yet</p>
             <p className="text-muted">Create your first quote, SOW, or invoice using the buttons above.</p>
           </div>
+        ) : viewMode === 'filing' ? (
+          <FilingView documents={filtered} clients={clients} projects={projects} onSelectDoc={setSelectedId} />
         ) : (
           <div className="table-wrap">
             <table className="data-table">
