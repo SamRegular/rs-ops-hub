@@ -1675,55 +1675,80 @@ function EditSOWForm({ doc, clients, store, onSave }) {
 // ─── Filing View ──────────────────────────────────────────────────────────────
 
 function FilingView({ documents, clients, projects, onSelectDoc }) {
-  // Get company name for display (brand name), fallback to person name
-  const getClientBrand = (client) => client?.company || client?.name || 'Unassigned'
-
-  // Group documents by Type > Month > (Brand + Project)
+  // Group documents by Brand > Project
   const filing = {}
-  const typeLabels = { quote: 'Quotes', sow: 'SOWs', invoice: 'Invoices' }
 
   documents.forEach(doc => {
-    const typeKey = doc.type
-    const typeLabel = typeLabels[typeKey] || doc.type?.toUpperCase()
-    const month = new Date(doc.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
     const client = clients.find(c => c.id === doc.clientId)
-    const clientBrand = getClientBrand(client)
+    const clientBrand = client?.company || client?.name || 'Unassigned'
     const project = projects.find(p => p.id === doc.projectId)
     const projectName = project?.name || doc.projectName || 'General'
-    const fileKey = `${clientBrand} — ${projectName}`
 
-    if (!filing[typeLabel]) filing[typeLabel] = {}
-    if (!filing[typeLabel][month]) filing[typeLabel][month] = {}
-    if (!filing[typeLabel][month][fileKey]) filing[typeLabel][month][fileKey] = []
-    filing[typeLabel][month][fileKey].push(doc)
+    if (!filing[clientBrand]) filing[clientBrand] = {}
+    if (!filing[clientBrand][projectName]) filing[clientBrand][projectName] = []
+    filing[clientBrand][projectName].push(doc)
   })
+
+  const brandsSorted = Object.keys(filing).sort()
 
   return (
     <div style={{ marginBottom: 32 }}>
-      {['Quotes', 'SOWs', 'Invoices'].map(typeLabel => (
-        filing[typeLabel] ? (
-          <div key={typeLabel} style={{ marginBottom: 32 }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--border)' }}>{typeLabel}</h3>
-            {Object.entries(filing[typeLabel]).map(([month, files]) => (
-              <div key={month} style={{ marginBottom: 20 }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{month}</p>
-                {Object.entries(files).map(([fileKey, docs]) => (
-                  <div key={fileKey} style={{ marginBottom: 12, paddingLeft: 0 }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: 6, fontWeight: 500 }}>{fileKey}</p>
-                    {docs.map(d => (
-                      <div key={d.id} onClick={() => onSelectDoc(d.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', fontSize: '0.85rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 4, cursor: 'pointer', transition: 'all 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.borderColor = 'var(--ink)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--ink-muted)', minWidth: '80px' }}>{d.invoiceNumber ?? `${d.type?.toUpperCase()}`}</span>
-                        <span style={{ color: 'var(--ink-muted)', marginLeft: 12, minWidth: '60px' }}>{new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+      {brandsSorted.map(brandName => (
+        <div key={brandName} style={{ marginBottom: 28 }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--ink)', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--border)' }}>{brandName}</h3>
+
+          {Object.entries(filing[brandName])
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([projectName, docs], projIdx) => (
+              <div
+                key={projectName}
+                style={{
+                  marginBottom: 16,
+                  padding: '12px 14px',
+                  background: projIdx % 2 === 0 ? 'var(--surface)' : 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  overflow: 'hidden'
+                }}
+              >
+                <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 10 }}>{projectName}</p>
+                <div style={{ paddingLeft: 8 }}>
+                  {docs
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .map(d => (
+                      <div
+                        key={d.id}
+                        onClick={() => onSelectDoc(d.id)}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '8px 10px',
+                          fontSize: '0.8rem',
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: '4px',
+                          marginBottom: 4,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent'
+                        }}
+                      >
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--ink-muted)', minWidth: '70px' }}>{d.invoiceNumber ?? `${d.type?.toUpperCase()}`}</span>
+                        <span style={{ color: 'var(--ink-muted)', marginLeft: 12, minWidth: '50px', fontSize: '0.75rem' }}>{new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
                         <span style={{ marginLeft: 12 }}><Badge status={d.status} /></span>
                         {d.total != null && <span style={{ marginLeft: 'auto', textAlign: 'right', minWidth: '80px' }} className="currency">{fmt(d.total)}</span>}
                       </div>
                     ))}
-                  </div>
-                ))}
+                </div>
               </div>
             ))}
-          </div>
-        ) : null
+        </div>
       ))}
     </div>
   )
@@ -1737,7 +1762,7 @@ export default function Documents({ store, initialSelectedId, onNav }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [search, setSearch] = useState('')
   const [createModal, setCreateModal] = useState(null)
-  const [viewMode, setViewMode] = useState('list') // 'list' or 'filing'
+  const [viewMode, setViewMode] = useState('filing') // 'list' or 'filing'
 
   const { documents, clients, projects } = store
 
