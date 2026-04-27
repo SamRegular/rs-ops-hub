@@ -65,9 +65,9 @@ Return only the overview. No heading, no preamble, no AI-speak.`
   }
 }
 
-// ─── SOW ─────────────────────────────────────────────────────────────────────
+// ─── SOW — removed pending redesign ─────────────────────────────────────────
 
-export async function generateSOW({ client, project, currency = 'GBP', notes = '' }) {
+/* export async function generateSOW({ client, project, currency = 'GBP', notes = '' }) {
   // Support both old phases format and new paymentTranches format
   const paymentTranches = project.paymentTranches ?? []
   const deliverables = project.deliverables ?? []
@@ -163,6 +163,7 @@ ${deliverableNames.map(n => `**"${n}"** means [write a one-sentence definition o
     startDate: project.startDate,
   }
 }
+*/
 
 // ─── Invoice ─────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Download, Send, CheckCircle, XCircle, Trash2, CheckSquare, Plus, FileText, BookOpen, Receipt } from 'lucide-react'
+import { ArrowLeft, Download, Trash2, Plus, FileText, Receipt } from 'lucide-react'
 import { Modal } from '../components/Modal.jsx'
 import { useToast } from '../components/Toast.jsx'
-import { generateQuote, generateSOW, generateInvoice } from '../ai/anthropic.js'
+import { generateQuote, generateInvoice } from '../ai/anthropic.js'
 import { STUDIO, TERMS_AND_CONDITIONS } from '../config/studio.js'
 
 function fmt(n, currency = 'GBP') {
@@ -882,9 +882,6 @@ function DocumentDetail({ doc, clients, projects, store, onBack }) {
           {doc.type === 'quote' && (
             <EditQuoteForm doc={doc} clients={clients} store={store} onSave={() => { setEditMode(false); toast('Quote updated', 'success') }} />
           )}
-          {doc.type === 'sow' && (
-            <EditSOWForm doc={doc} clients={clients} store={store} onSave={() => { setEditMode(false); toast('SOW updated', 'success') }} />
-          )}
         </div>
       )}
     </div>
@@ -1107,9 +1104,9 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
   )
 }
 
-// ─── SOW Creation Modal ───────────────────────────────────────────────────────
+// ─── SOW Creation Modal — removed pending redesign ───────────────────────────
 
-function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
+/* function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
   const toast = useToast()
   const [client, setClient] = useState('')
   const [project, setProject] = useState('')
@@ -1287,7 +1284,7 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
       )}
     </Modal>
   )
-}
+} */
 
 // ─── Invoice Creation Modal ───────────────────────────────────────────────────
 
@@ -1612,6 +1609,8 @@ function EditQuoteForm({ doc, clients, store, onSave }) {
   )
 }
 
+/* EditSOWForm removed pending redesign
+
 function EditSOWForm({ doc, clients, store, onSave }) {
   const toast = useToast()
 
@@ -1721,6 +1720,7 @@ function EditSOWForm({ doc, clients, store, onSave }) {
     </div>
   )
 }
+*/
 
 // ─── Filing View ──────────────────────────────────────────────────────────────
 
@@ -1876,7 +1876,6 @@ export default function Documents({ store, initialSelectedId, onNav }) {
         <h1 className="page-title">Documents</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn" onClick={() => setCreateModal('quote')}><FileText size={14} /> Quote</button>
-          <button className="btn" onClick={() => setCreateModal('sow')}><BookOpen size={14} /> SOW</button>
           <button className="btn btn-primary" onClick={() => setCreateModal('invoice')}><Receipt size={14} /> Invoice</button>
         </div>
       </div>
@@ -1905,7 +1904,6 @@ export default function Documents({ store, initialSelectedId, onNav }) {
         <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
           <option value="">All Types</option>
           <option value="quote">Quote</option>
-          <option value="sow">SOW</option>
           <option value="invoice">Invoice</option>
         </select>
         <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
@@ -1972,9 +1970,6 @@ export default function Documents({ store, initialSelectedId, onNav }) {
 
       {createModal === 'quote' && (
         <CreateQuoteModal clients={store.clients} store={store} onClose={() => setCreateModal(null)} onCreated={(doc) => { setSelectedId(doc.id); setCreateModal(null) }} />
-      )}
-      {createModal === 'sow' && (
-        <CreateSOWModal clients={store.clients} projects={store.projects} store={store} onClose={() => setCreateModal(null)} onCreated={(doc) => { setSelectedId(doc.id); setCreateModal(null) }} />
       )}
       {createModal === 'invoice' && (
         <CreateInvoiceModal clients={store.clients} projects={store.projects} store={store} onClose={() => setCreateModal(null)} onCreated={(doc) => { setSelectedId(doc.id); setCreateModal(null) }} />
