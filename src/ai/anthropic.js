@@ -106,35 +106,51 @@ export async function generateSOW({ client, project, currency = 'GBP', notes = '
     ? new Date(project.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
     : 'To be confirmed'
 
-  const prompt = `You are writing a Statement of Work for ${STUDIO.name}, a design studio based in London. Write in clear, professional British English — be direct and natural, no corporate clichés. Return exactly the following sections and no others:
+  const prompt = `Write a Statement of Work for ${STUDIO.name}. Use clear, professional British English — direct and natural, no corporate clichés.
+
+CRITICAL RULES — you must follow these exactly:
+1. Use ONLY the deliverables listed below — do not add, rename, or invent any others
+2. Copy the fees table exactly as given — do not calculate or change any numbers
+3. Define ONLY the terms listed — do not add extra definitions
+4. Return exactly these five sections, nothing else
+
+---
 
 ## INTRODUCTION
-Write 2–3 sentences. Just state: this is a design SOW between ${STUDIO.name} and ${client.name}${client.company ? ` (${client.company})` : ''} for "${project.name || 'the Project'}" (${project.projectType ?? 'design'}). Keep it straightforward — no flowery language, no AI-speak.
+2–3 sentences. State that this SOW is between ${STUDIO.name} and ${client.name}${client.company ? ` (${client.company})` : ''} for "${project.name || 'the Project'}"${project.projectType ? ` (${project.projectType})` : ''}. Be direct, no filler.
 
 ## SCOPE OF SERVICES
-Write 1–2 short paragraphs describing the design services ${STUDIO.name} will provide. Reference the brief: "${project.brief || 'as discussed and agreed between the parties'}". Then list the key deliverables as bullet points:
+1–2 short paragraphs describing what ${STUDIO.name} will provide. Draw from this brief: "${project.brief || 'design services as agreed'}".
+
+Then list these deliverables exactly — do not change them, do not add others:
 ${deliverablesList}
 
 ## TIMELINE & MILESTONES
 Project start: ${startDateFormatted}
-Reference each deliverable milestone corresponding to the payment schedule below.
+Write 2–3 sentences linking payment milestones to deliverables. Do not invent dates.
 
 ## FEES & PAYMENT SCHEDULE
-Present the fee breakdown in a clear table format for each tranche. Use this structure:
+Reproduce this table exactly — do not alter any figures:
 
-| Tranche | Description | Cost (ex VAT) | VAT | % of Total | Due |
-|---------|-------------|---------------|-----|-----------|-----|
+| Tranche | Description | Cost (ex VAT) | VAT (20%) | % of Total | Due |
+|---------|-------------|---------------|-----------|------------|-----|
 ${trancheTableRows.map(r => `| Tranche ${r.tranche} | ${r.name} | ${r.cost} | ${r.vat} | ${r.percentage} | ${r.dueDate} |`).join('\n')}
 | | **TOTAL** | **${fmt(totalValue, currency)}** | **${fmt(vat, currency)}** | **100%** | |
 
-Then add this summary:
 **Total Project Fee (inc VAT): ${fmt(totalValue + vat, currency)}**
 
 ## DEFINITIONS
-Define each of the following terms as used in this document. Format each as: **"[Term]"** means [definition]. Be precise and concise (one sentence each).
-Define all of these terms: Agency, Client, Services, Deliverables, Project, Fees${deliverableNames.length ? `, and also define each of these specific deliverables as a term: ${deliverableNames.join(', ')}` : ''}.
+Define each term below using the format **"[Term]"** means [one sentence]. Define ONLY these terms:
 
-Write only these sections above. No preamble, no closing remarks.`
+**"Agency"** means ${STUDIO.name}, a design studio providing the Services under this agreement.
+**"Client"** means ${client.name}${client.company ? `, trading as ${client.company},` : ','} the party commissioning the Services.
+**"Project"** means the design project titled "${project.name || 'the Project'}" as described in this SOW.
+**"Services"** means the design services to be provided by the Agency as set out in the Scope of Services.
+**"Deliverables"** means the specific outputs listed in the Scope of Services section above.
+**"Fees"** means the amounts payable by the Client as set out in the Fees & Payment Schedule.
+${deliverableNames.map(n => `**"${n}"** means [write a one-sentence definition of this specific deliverable based on its name].`).join('\n')}
+
+---`
 
   const content = await callClaude(prompt)
 

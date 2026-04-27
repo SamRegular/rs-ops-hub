@@ -976,7 +976,7 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
         clientId,
         projectId,
         projectName: projectName || 'Custom Quote',
-        status: 'sent',
+        status: 'draft',
         deliverables: cleanDeliverables,
         paymentTranches,
         validityDays,
@@ -1160,7 +1160,7 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
         clientId: client,
         projectId: project || null,
         projectName: selectedProject?.name || projectName || 'SOW',
-        status: 'sent',
+        status: 'draft',
         content: result.content,
         deliverables: cleanDeliverables,
         paymentTranches: cleanPaymentTranches,
@@ -1198,7 +1198,22 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
             </div>
             <div className="form-group">
               <label className="form-label">Existing Project (optional)</label>
-              <select className="form-select" value={project} onChange={e => { setProject(e.target.value); if (e.target.value) { const p = projects.find(pr => pr.id === e.target.value); setProjectName(p?.name || ''); setProjectType(p?.projectType || ''); setStartDate(p?.startDate || ''); } }} disabled={!client}>
+              <select className="form-select" value={project} onChange={e => {
+                setProject(e.target.value)
+                if (e.target.value) {
+                  const p = projects.find(pr => pr.id === e.target.value)
+                  setProjectName(p?.name || '')
+                  setProjectType(p?.projectType || '')
+                  setStartDate(p?.startDate || '')
+                  setBrief(p?.brief || '')
+                  if (p?.deliverables?.length > 0) {
+                    setDeliverables(p.deliverables.map(d => ({ id: crypto.randomUUID(), name: d.name || '' })))
+                  }
+                  if (p?.paymentTranches?.length > 0) {
+                    setPaymentTranches(p.paymentTranches.map(t => ({ id: crypto.randomUUID(), label: t.label || '', month: t.month || '', amount: t.amount || '' })))
+                  }
+                }
+              }} disabled={!client}>
                 <option value="">— Select project —</option>
                 {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
