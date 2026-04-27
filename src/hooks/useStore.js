@@ -25,12 +25,29 @@ export function useStore() {
         storage.getAll('retainers'),
       ])
 
-      // Add empty deliverables and paymentTranches to projects
-      const enrichedProjects = p.map(project => ({
-        ...project,
-        deliverables: project.deliverables || [],
-        paymentTranches: project.paymentTranches || [],
-      }))
+      // Load payment tranches for each project
+      const supabase = storage.supabase
+      const enrichedProjects = await Promise.all(
+        p.map(async (project) => {
+          try {
+            const { data: tranches } = await supabase
+              .from('payment_tranches')
+              .select('*')
+              .eq('projectId', project.id)
+
+            return {
+              ...project,
+              paymentTranches: tranches || [],
+            }
+          } catch (err) {
+            console.error(`Error loading tranches for project ${project.id}:`, err)
+            return {
+              ...project,
+              paymentTranches: [],
+            }
+          }
+        })
+      )
 
       setClients(c)
       setProjects(enrichedProjects)
