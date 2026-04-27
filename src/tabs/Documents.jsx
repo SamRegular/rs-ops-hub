@@ -835,22 +835,18 @@ function DocumentDetail({ doc, clients, projects, store, onBack }) {
           <ArrowLeft size={12} /> Documents
         </button>
         <div style={{ flex: 1 }} />
-        <Badge status={doc.status} />
-        {isInvoice && doc.status === 'draft' && (
-          <button className="btn" onClick={() => handleStatusChange('sent')}><Send size={13} /> Mark Sent</button>
-        )}
-        {isInvoice && doc.status === 'sent' && (
-          <button className="btn btn-accent" onClick={() => handleStatusChange('paid')}><CheckCircle size={13} /> Mark Paid</button>
-        )}
-        {isQuote && doc.status === 'draft' && (
-          <button className="btn" onClick={() => handleStatusChange('sent')}><Send size={13} /> Mark Sent</button>
-        )}
-        {isQuote && doc.status === 'sent' && (
-          <>
-            <button className="btn btn-accent" onClick={() => handleStatusChange('approved')}><CheckSquare size={13} /> Approve</button>
-            <button className="btn btn-danger" onClick={() => handleStatusChange('rejected')}><XCircle size={13} /> Reject</button>
-          </>
-        )}
+        <select
+          className="form-select"
+          value={doc.status}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          style={{ minWidth: '120px', fontSize: '0.85rem' }}
+        >
+          <option value="draft">Draft</option>
+          <option value="sent">Sent</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="paid">Paid</option>
+        </select>
         {doc.status === 'draft' && (
           <button className="btn" onClick={() => setEditMode(true)}>Edit</button>
         )}
@@ -969,7 +965,7 @@ function CreateQuoteModal({ clients, store, onClose, onCreated }) {
         clientId,
         projectId,
         projectName: projectName || 'Custom Quote',
-        status: 'draft',
+        status: 'sent',
         deliverables: cleanDeliverables,
         paymentTranches,
         validityDays,
@@ -1148,7 +1144,7 @@ function CreateSOWModal({ clients, projects, store, onClose, onCreated }) {
         clientId: client,
         projectId: project || null,
         projectName: selectedProject?.name || projectName || 'SOW',
-        status: 'draft',
+        status: 'sent',
         content: result.content,
         deliverables: cleanDeliverables,
         paymentTranches,
