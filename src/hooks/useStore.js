@@ -30,20 +30,28 @@ export function useStore() {
       const enrichedProjects = await Promise.all(
         p.map(async (project) => {
           try {
-            const { data: tranches } = await supabase
+            const { data: tranches, error: tranchesError } = await supabase
               .from('payment_tranches')
               .select('*')
               .eq('projectId', project.id)
 
+            if (tranchesError) {
+              console.error(`Error loading tranches for project ${project.id}:`, tranchesError)
+              return {
+                ...project,
+                paymentTranches: Array.isArray(project.paymentTranches) ? project.paymentTranches : [],
+              }
+            }
+
             return {
               ...project,
-              paymentTranches: tranches || [],
+              paymentTranches: Array.isArray(tranches) ? tranches : [],
             }
           } catch (err) {
             console.error(`Error loading tranches for project ${project.id}:`, err)
             return {
               ...project,
-              paymentTranches: [],
+              paymentTranches: Array.isArray(project.paymentTranches) ? project.paymentTranches : [],
             }
           }
         })
