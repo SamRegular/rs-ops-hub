@@ -219,14 +219,34 @@ export function useStore() {
     return projects
       .filter(p => p.clientId === clientId && p.status === 'Active')
       .reduce((s, p) => {
-        if (p.paymentTranches?.length) return s + p.paymentTranches.reduce((ts, t) => ts + (Number(t.amount) || 0), 0)
-        return s + (p.phases ?? []).reduce((ps, ph) => ps + (Number(ph.value) || 0), 0)
+        try {
+          const tranches = Array.isArray(p.paymentTranches) ? p.paymentTranches : []
+          const phases = Array.isArray(p.phases) ? p.phases : []
+
+          if (tranches.length > 0) {
+            return s + tranches.reduce((ts, t) => ts + (Number(t.amount) || 0), 0)
+          }
+          return s + phases.reduce((ps, ph) => ps + (Number(ph.value) || 0), 0)
+        } catch (err) {
+          console.error('Error calculating LTV:', err, p)
+          return s
+        }
       }, 0)
   }, [projects])
 
   const projectTotalValue = useCallback((project) => {
-    if (project.paymentTranches?.length) return project.paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
-    return (project.phases ?? []).reduce((s, p) => s + (Number(p.value) || 0), 0)
+    try {
+      const tranches = Array.isArray(project.paymentTranches) ? project.paymentTranches : []
+      const phases = Array.isArray(project.phases) ? project.phases : []
+
+      if (tranches.length > 0) {
+        return tranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+      }
+      return phases.reduce((s, p) => s + (Number(p.value) || 0), 0)
+    } catch (err) {
+      console.error('Error calculating project total:', err, project)
+      return 0
+    }
   }, [])
 
   const getNextInvoiceNumber = useCallback(() => {

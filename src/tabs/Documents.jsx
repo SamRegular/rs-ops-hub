@@ -1447,38 +1447,44 @@ function EditInvoiceForm({ doc, clients, store, onSave }) {
 
 function EditQuoteForm({ doc, clients, store, onSave }) {
   const toast = useToast()
-  const [brief, setBrief] = useState(doc.overview?.substring(0, 200) ?? '')
-  const [lineItems, setLineItems] = useState(doc.lineItems ?? [{ id: crypto.randomUUID(), desc: '', qty: 1, unitPrice: 0 }])
-  const [depositPercent, setDepositPercent] = useState(doc.depositPercent ?? 50)
+  const [paymentTranches, setPaymentTranches] = useState(doc.paymentTranches ?? [{ id: crypto.randomUUID(), label: 'Deposit', month: '', amount: '' }])
+  const [deliverables, setDeliverables] = useState(doc.deliverables ?? [{ id: crypto.randomUUID(), name: '' }])
   const [notes, setNotes] = useState(doc.notes ?? '')
   const [saving, setSaving] = useState(false)
 
-  const addLine = () => setLineItems(prev => [...prev, { id: crypto.randomUUID(), desc: '', qty: 1, unitPrice: 0 }])
-  const removeLine = (id) => setLineItems(prev => prev.filter(l => l.id !== id))
-  const setLine = (id, k, v) => setLineItems(prev => prev.map(l => l.id === id ? { ...l, [k]: v } : l))
+  const addTranche = () => setPaymentTranches(prev => [...prev, { id: crypto.randomUUID(), label: '', month: '', amount: '' }])
+  const removeTranche = (id) => setPaymentTranches(prev => prev.filter(t => t.id !== id))
+  const setTranche = (id, k, v) => setPaymentTranches(prev => prev.map(t => t.id === id ? { ...t, [k]: v } : t))
+
+  const addDeliverable = () => setDeliverables(prev => [...prev, { id: crypto.randomUUID(), name: '' }])
+  const removeDeliverable = (id) => setDeliverables(prev => prev.filter(d => d.id !== id))
+  const setDeliverable = (id, v) => setDeliverables(prev => prev.map(d => d.id === id ? { ...d, name: v } : d))
+
+  const total = Array.isArray(paymentTranches)
+    ? paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+    : 0
+  const vat = total * 0.2
+  const grandTotal = total + vat
 
   async function handleSave() {
-    const subtotal = lineItems.reduce((s, l) => s + (Number(l.qty) * Number(l.unitPrice)), 0)
-    if (!subtotal) { toast('Add line items', 'error'); return }
+    if (!paymentTranches.some(t => t.label && t.amount)) { toast('Add payment tranches', 'error'); return }
     setSaving(true)
     try {
       const result = await generateQuote({
         client: clients.find(c => c.id === doc.clientId),
-        project: { name: doc.projectName, brief },
-        lineItems,
-        depositPercent,
+        project: { name: doc.projectName },
+        deliverables,
+        paymentTranches,
         notes,
       })
       await store.updateDocument(doc.id, {
         overview: result.overview,
         content: result.overview,
-        lineItems,
+        deliverables,
+        paymentTranches,
         subtotal: result.subtotal,
         vat: result.vat,
         total: result.total,
-        deposit: result.deposit,
-        balance: result.balance,
-        depositPercent,
         validUntil: result.validUntil,
         notes,
       })
@@ -1494,32 +1500,45 @@ function EditQuoteForm({ doc, clients, store, onSave }) {
     <div className="card" style={{ padding: 24 }}>
       <div className="form-grid form-grid-2" style={{ gap: 16 }}>
         <div className="form-group" style={{ gridColumn: '1/-1' }}>
-          <label className="form-label">Brief (for overview paragraph)</label>
-          <textarea className="form-textarea" rows={2} value={brief} onChange={e => setBrief(e.target.value)} />
-        </div>
-        <div className="form-group" style={{ gridColumn: '1/-1' }}>
-          <label className="form-label">Line Items</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 110px 32px', gap: 8, marginBottom: 8 }}>
-            <span className="form-label">Description</span>
-            <span className="form-label">Qty</span>
-            <span className="form-label">Unit Price</span>
+          <label className="form-label">Deliverables</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 8 }}>
+            <span className="form-label">Deliverable Name</span>
             <span />
           </div>
-          {lineItems.map(l => (
-            <div key={l.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 110px 32px', gap: 8, marginBottom: 4 }}>
-              <input className="form-input" placeholder="Description" value={l.desc} onChange={e => setLine(l.id, 'desc', e.target.value)} />
-              <input className="form-input" type="number" min="1" value={l.qty} onChange={e => setLine(l.id, 'qty', e.target.value)} />
-              <input className="form-input" type="number" min="0" step="50" value={l.unitPrice} onChange={e => setLine(l.id, 'unitPrice', e.target.value)} />
-              <button className="btn btn-ghost btn-sm" onClick={() => removeLine(l.id)} style={{ padding: '4px' }}><Trash2 size={14} /></button>
+          {deliverables.map(d => (
+            <div key={d.id} style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 4 }}>
+              <input className="form-input" placeholder="Deliverable name" value={d.name} onChange={e => setDeliverable(d.id, e.target.value)} />
+              <button className="btn btn-ghost btn-sm" onClick={() => removeDeliverable(d.id)} style={{ padding: '4px' }}><Trash2 size={14} /></button>
             </div>
           ))}
-          <button className="btn btn-ghost btn-sm" onClick={addLine} style={{ marginTop: 8 }}><Plus size={13} /> Add Line</button>
+          <button className="btn btn-ghost btn-sm" onClick={addDeliverable} style={{ marginTop: 8 }}><Plus size={13} /> Add Deliverable</button>
         </div>
-        <div className="form-group">
-          <label className="form-label">Deposit %</label>
-          <input className="form-input" type="number" min="0" max="100" value={depositPercent} onChange={e => setDepositPercent(Number(e.target.value))} />
+        <div className="form-group" style={{ gridColumn: '1/-1' }}>
+          <label className="form-label">Payment Structure</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 8 }}>
+            <span className="form-label">Label</span>
+            <span className="form-label">Month</span>
+            <span className="form-label">Amount (£ ex VAT)</span>
+            <span />
+          </div>
+          {paymentTranches.map(t => (
+            <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 4 }}>
+              <input className="form-input" placeholder="e.g. Deposit" value={t.label} onChange={e => setTranche(t.id, 'label', e.target.value)} />
+              <input className="form-input" type="month" value={t.month} onChange={e => setTranche(t.id, 'month', e.target.value)} />
+              <input className="form-input" type="number" min="0" step="100" value={t.amount} onChange={e => setTranche(t.id, 'amount', e.target.value)} />
+              <button className="btn btn-ghost btn-sm" onClick={() => removeTranche(t.id)} style={{ padding: '4px' }}><Trash2 size={14} /></button>
+            </div>
+          ))}
+          <button className="btn btn-ghost btn-sm" onClick={addTranche} style={{ marginTop: 8 }}><Plus size={13} /> Add Tranche</button>
+          {total > 0 && (
+            <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}><span className="text-muted">Total (ex VAT)</span><span className="currency">{fmt(total)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}><span className="text-muted">VAT (20%)</span><span className="currency">{fmt(vat)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}><span>Grand Total</span><span className="currency">{fmt(grandTotal)}</span></div>
+            </div>
+          )}
         </div>
-        <div className="form-group">
+        <div className="form-group" style={{ gridColumn: '1/-1' }}>
           <label className="form-label">Notes</label>
           <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
@@ -1533,26 +1552,32 @@ function EditQuoteForm({ doc, clients, store, onSave }) {
 
 function EditSOWForm({ doc, clients, store, onSave }) {
   const toast = useToast()
-  const [phases, setPhases] = useState(doc.phases ?? [{ id: crypto.randomUUID(), name: '', value: '' }])
+  const [paymentTranches, setPaymentTranches] = useState(doc.paymentTranches ?? [{ id: crypto.randomUUID(), label: 'Tranche 1', month: '', amount: '' }])
+  const [deliverables, setDeliverables] = useState(doc.deliverables ?? [{ id: crypto.randomUUID(), name: '' }])
   const [notes, setNotes] = useState(doc.notes ?? '')
   const [saving, setSaving] = useState(false)
 
-  const addPhase = () => setPhases(prev => [...prev, { id: crypto.randomUUID(), name: '', value: '' }])
-  const removePhase = (id) => setPhases(prev => prev.filter(p => p.id !== id))
-  const setPhase = (id, k, v) => setPhases(prev => prev.map(p => p.id === id ? { ...p, [k]: v } : p))
+  const addTranche = () => setPaymentTranches(prev => [...prev, { id: crypto.randomUUID(), label: '', month: '', amount: '' }])
+  const removeTranche = (id) => setPaymentTranches(prev => prev.filter(t => t.id !== id))
+  const setTranche = (id, k, v) => setPaymentTranches(prev => prev.map(t => t.id === id ? { ...t, [k]: v } : t))
+
+  const addDeliverable = () => setDeliverables(prev => [...prev, { id: crypto.randomUUID(), name: '' }])
+  const removeDeliverable = (id) => setDeliverables(prev => prev.filter(d => d.id !== id))
+  const setDeliverable = (id, v) => setDeliverables(prev => prev.map(d => d.id === id ? { ...d, name: v } : d))
 
   async function handleSave() {
-    if (!phases.some(p => p.name && p.value)) { toast('Add at least one phase', 'error'); return }
+    if (!paymentTranches.some(t => t.label && t.amount)) { toast('Add at least one payment tranche', 'error'); return }
     setSaving(true)
     try {
       const result = await generateSOW({
         client: clients.find(c => c.id === doc.clientId),
-        project: { name: doc.projectName, phases, startDate: doc.startDate },
+        project: { name: doc.projectName, paymentTranches, deliverables, startDate: doc.startDate },
         notes,
       })
       await store.updateDocument(doc.id, {
         content: result.content,
-        phases: result.phases,
+        paymentTranches,
+        deliverables,
         total: result.totalValue,
         vat: result.vat,
         notes,
@@ -1569,20 +1594,36 @@ function EditSOWForm({ doc, clients, store, onSave }) {
     <div className="card" style={{ padding: 24 }}>
       <div className="form-grid form-grid-2" style={{ gap: 16 }}>
         <div className="form-group" style={{ gridColumn: '1/-1' }}>
-          <label className="form-label">Phases & Deliverables</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 32px', gap: 8, marginBottom: 8 }}>
-            <span className="form-label">Phase Name</span>
-            <span className="form-label">Value (£)</span>
+          <label className="form-label">Deliverables</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 8 }}>
+            <span className="form-label">Deliverable Name</span>
             <span />
           </div>
-          {phases.map(p => (
-            <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 32px', gap: 8, marginBottom: 4 }}>
-              <input className="form-input" placeholder="Phase name" value={p.name} onChange={e => setPhase(p.id, 'name', e.target.value)} />
-              <input className="form-input" type="number" min="0" step="100" value={p.value} onChange={e => setPhase(p.id, 'value', e.target.value)} />
-              <button className="btn btn-ghost btn-sm" onClick={() => removePhase(p.id)} style={{ padding: '4px' }}><Trash2 size={14} /></button>
+          {deliverables.map(d => (
+            <div key={d.id} style={{ display: 'grid', gridTemplateColumns: '1fr 32px', gap: 8, marginBottom: 4 }}>
+              <input className="form-input" placeholder="Deliverable name" value={d.name} onChange={e => setDeliverable(d.id, e.target.value)} />
+              <button className="btn btn-ghost btn-sm" onClick={() => removeDeliverable(d.id)} style={{ padding: '4px' }}><Trash2 size={14} /></button>
             </div>
           ))}
-          <button className="btn btn-ghost btn-sm" onClick={addPhase} style={{ marginTop: 8 }}><Plus size={13} /> Add Phase</button>
+          <button className="btn btn-ghost btn-sm" onClick={addDeliverable} style={{ marginTop: 8 }}><Plus size={13} /> Add Deliverable</button>
+        </div>
+        <div className="form-group" style={{ gridColumn: '1/-1' }}>
+          <label className="form-label">Payment Structure</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 8 }}>
+            <span className="form-label">Label</span>
+            <span className="form-label">Month</span>
+            <span className="form-label">Amount (£)</span>
+            <span />
+          </div>
+          {paymentTranches.map(t => (
+            <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px 32px', gap: 8, marginBottom: 4 }}>
+              <input className="form-input" placeholder="e.g. Deposit" value={t.label} onChange={e => setTranche(t.id, 'label', e.target.value)} />
+              <input className="form-input" type="month" value={t.month} onChange={e => setTranche(t.id, 'month', e.target.value)} />
+              <input className="form-input" type="number" min="0" step="100" value={t.amount} onChange={e => setTranche(t.id, 'amount', e.target.value)} />
+              <button className="btn btn-ghost btn-sm" onClick={() => removeTranche(t.id)} style={{ padding: '4px' }}><Trash2 size={14} /></button>
+            </div>
+          ))}
+          <button className="btn btn-ghost btn-sm" onClick={addTranche} style={{ marginTop: 8 }}><Plus size={13} /> Add Tranche</button>
         </div>
         <div className="form-group" style={{ gridColumn: '1/-1' }}>
           <label className="form-label">Notes</label>

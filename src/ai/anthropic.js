@@ -26,17 +26,21 @@ function today() {
 
 // ─── Quote ───────────────────────────────────────────────────────────────────
 
-export async function generateQuote({ client, project, lineItems, depositPercent, validityDays = 30, currency = 'GBP', notes = '' }) {
-  const subtotal = lineItems.reduce((s, li) => s + (Number(li.qty) * Number(li.unitPrice)), 0)
+export async function generateQuote({ client, project, deliverables = [], paymentTranches = [], validityDays = 30, currency = 'GBP', notes = '' }) {
+  // Calculate totals from payment tranches
+  const subtotal = Array.isArray(paymentTranches)
+    ? paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+    : 0
   const vat = subtotal * STUDIO.vatRate
   const total = subtotal + vat
-  const deposit = total * (depositPercent / 100)
-  const balance = total - deposit
 
   const validUntil = new Date(Date.now() + validityDays * 24 * 60 * 60 * 1000)
     .toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
-  const itemList = lineItems.map(li => `- ${li.desc}: ${fmt(Number(li.qty) * Number(li.unitPrice), currency)}`).join('\n')
+  // Build deliverables list for prompt
+  const deliverablesList = Array.isArray(deliverables)
+    ? deliverables.map(d => `- ${d.name || 'Deliverable'}`).join('\n')
+    : '- Design services as agreed'
 
   const prompt = `Write a concise, professional project overview paragraph (3–5 sentences) for a design studio quote. Describe the creative engagement in clear, confident language. Avoid corporate clichés and flowery language. Be direct and genuine. Use British English. Do not list prices or deliverables — just set the context for the work.
 
@@ -46,7 +50,7 @@ Project: ${project.name || 'Design Project'}
 Type: ${project.projectType ?? 'Design Project'}
 Brief: ${project.brief || 'Strategic design engagement'}
 Deliverables:
-${itemList}
+${deliverablesList}
 
 Return only the paragraph. No heading, no preamble.`
 
@@ -57,9 +61,6 @@ Return only the paragraph. No heading, no preamble.`
     subtotal,
     vat,
     total,
-    deposit,
-    balance,
-    depositPercent,
     validUntil,
     currency,
     notes,
@@ -69,32 +70,37 @@ Return only the paragraph. No heading, no preamble.`
 // ─── SOW ─────────────────────────────────────────────────────────────────────
 
 export async function generateSOW({ client, project, currency = 'GBP', notes = '' }) {
-  const phases = project.phases ?? []
-  const totalValue = phases.reduce((s, p) => s + (Number(p.value) || 0), 0)
+  // Support both old phases format and new paymentTranches format
+  const paymentTranches = project.paymentTranches ?? []
+  const deliverables = project.deliverables ?? []
+
+  const totalValue = Array.isArray(paymentTranches)
+    ? paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+    : 0
   const vat = totalValue * STUDIO.vatRate
 
-  const phaseNames = phases.filter(p => p.name).map(p => p.name)
-  const phasesText = phaseNames.length
-    ? phaseNames.map((n, i) => `Phase ${i + 1}: ${n} — ${fmt(Number(phases[i].value) || 0, currency)}`).join('\n')
-    : 'Full project scope as briefed'
+  const deliverableNames = deliverables.filter(d => d.name).map(d => d.name)
+  const deliverablesList = deliverableNames.length
+    ? deliverableNames.map(n => `- ${n}`).join('\n')
+    : '- As outlined in the project brief'
 
   // Build Tranche table with costs, VAT, percentages, and due dates
-  const trancheTableRows = phases
-    .filter(p => p.name && p.value)
-    .map((p, i) => {
-      const cost = Number(p.value) || 0
-      const phaseVat = cost * STUDIO.vatRate
+  const trancheTableRows = paymentTranches
+    .filter(t => t.label && t.amount)
+    .map((t, i) => {
+      const cost = Number(t.amount) || 0
+      const trancheVat = cost * STUDIO.vatRate
       const percentOfTotal = totalValue > 0 ? ((cost / totalValue) * 100).toFixed(0) : 0
-      const dueDate = p.dueDate
-        ? new Date(p.dueDate).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+      const dueMonth = t.month
+        ? new Date(t.month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
         : 'To be confirmed'
       return {
         tranche: i + 1,
-        name: p.name,
+        name: t.label,
         cost: fmt(cost, currency),
-        vat: fmt(phaseVat, currency),
+        vat: fmt(trancheVat, currency),
         percentage: `${percentOfTotal}%`,
-        dueDate: dueDate,
+        dueDate: dueMonth,
       }
     })
 
@@ -109,13 +115,11 @@ Write 2–3 sentences introducing the agreement between ${STUDIO.name} (the Agen
 
 ## SCOPE OF SERVICES
 Write 1–2 short paragraphs describing the design services ${STUDIO.name} will provide. Reference the brief: "${project.brief || 'as discussed and agreed between the parties'}". Then list the key deliverables as bullet points:
-${phaseNames.length ? phaseNames.map(n => `- ${n}`).join('\n') : '- As outlined in the project brief'}
+${deliverablesList}
 
 ## TIMELINE & MILESTONES
 Project start: ${startDateFormatted}
-List each phase on its own line in this format: **Phase [N] — [Name]**: [brief one-line description of what this phase delivers]
-Phases:
-${phasesText}
+Reference each deliverable milestone corresponding to the payment schedule below.
 
 ## FEES & PAYMENT SCHEDULE
 Present the fee breakdown in a clear table format for each tranche. Use this structure:
@@ -130,7 +134,7 @@ Then add this summary:
 
 ## DEFINITIONS
 Define each of the following terms as used in this document. Format each as: **"[Term]"** means [definition]. Be precise and concise (one sentence each).
-Define all of these terms: Agency, Client, Services, Deliverables, Project, Fees${phaseNames.length ? `, and also define each of these specific deliverables as a term: ${phaseNames.join(', ')}` : ''}.
+Define all of these terms: Agency, Client, Services, Deliverables, Project, Fees${deliverableNames.length ? `, and also define each of these specific deliverables as a term: ${deliverableNames.join(', ')}` : ''}.
 
 Write only these sections above. No preamble, no closing remarks.`
 
@@ -138,7 +142,6 @@ Write only these sections above. No preamble, no closing remarks.`
 
   return {
     content: content.trim(),
-    phases,
     totalValue,
     vat,
     currency,
