@@ -1675,47 +1675,55 @@ function EditSOWForm({ doc, clients, store, onSave }) {
 // ─── Filing View ──────────────────────────────────────────────────────────────
 
 function FilingView({ documents, clients, projects, onSelectDoc }) {
-  // Group documents by Client > Month > Project
+  // Get company name for display (brand name), fallback to person name
+  const getClientBrand = (client) => client?.company || client?.name || 'Unassigned'
+
+  // Group documents by Type > Month > (Brand + Project)
   const filing = {}
+  const typeLabels = { quote: 'Quotes', sow: 'SOWs', invoice: 'Invoices' }
 
   documents.forEach(doc => {
+    const typeKey = doc.type
+    const typeLabel = typeLabels[typeKey] || doc.type?.toUpperCase()
+    const month = new Date(doc.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
     const client = clients.find(c => c.id === doc.clientId)
-    const clientName = client?.name || 'Unassigned'
-    const month = new Date(doc.createdAt).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+    const clientBrand = getClientBrand(client)
     const project = projects.find(p => p.id === doc.projectId)
     const projectName = project?.name || doc.projectName || 'General'
+    const fileKey = `${clientBrand} — ${projectName}`
 
-    if (!filing[clientName]) filing[clientName] = {}
-    if (!filing[clientName][month]) filing[clientName][month] = {}
-    if (!filing[clientName][month][projectName]) filing[clientName][month][projectName] = []
-    filing[clientName][month][projectName].push(doc)
+    if (!filing[typeLabel]) filing[typeLabel] = {}
+    if (!filing[typeLabel][month]) filing[typeLabel][month] = {}
+    if (!filing[typeLabel][month][fileKey]) filing[typeLabel][month][fileKey] = []
+    filing[typeLabel][month][fileKey].push(doc)
   })
 
   return (
     <div style={{ marginBottom: 32 }}>
-      {Object.entries(filing).map(([clientName, months]) => (
-        <div key={clientName} style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--ink)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>{clientName}</h3>
-          {Object.entries(months).map(([month, projects]) => (
-            <div key={month} style={{ marginLeft: 16, marginBottom: 16 }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: 8 }}>{month}</p>
-              {Object.entries(projects).map(([projectName, docs]) => (
-                <div key={projectName} style={{ marginLeft: 16 }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: 6 }}>{projectName}</p>
-                  {docs.map(d => (
-                    <div key={d.id} onClick={() => onSelectDoc(d.id)} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: '0.85rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 4, cursor: 'pointer', transition: 'all 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.borderColor = 'var(--ink)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--ink-muted)' }}>{d.invoiceNumber ?? d.type?.toUpperCase()}</span>
-                      <span style={{ flex: 1, marginLeft: 12 }}><TypeBadge type={d.type} /></span>
-                      <span style={{ color: 'var(--ink-muted)' }}>{new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                      <span style={{ marginLeft: 12, fontWeight: 500 }}><Badge status={d.status} /></span>
-                      {d.total != null && <span style={{ marginLeft: 12, textAlign: 'right', minWidth: '80px' }} className="currency">{fmt(d.total)}</span>}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+      {['Quotes', 'SOWs', 'Invoices'].map(typeLabel => (
+        filing[typeLabel] ? (
+          <div key={typeLabel} style={{ marginBottom: 32 }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--ink)', marginBottom: 16, paddingBottom: 12, borderBottom: '2px solid var(--border)' }}>{typeLabel}</h3>
+            {Object.entries(filing[typeLabel]).map(([month, files]) => (
+              <div key={month} style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{month}</p>
+                {Object.entries(files).map(([fileKey, docs]) => (
+                  <div key={fileKey} style={{ marginBottom: 12, paddingLeft: 0 }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--ink-muted)', marginBottom: 6, fontWeight: 500 }}>{fileKey}</p>
+                    {docs.map(d => (
+                      <div key={d.id} onClick={() => onSelectDoc(d.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', fontSize: '0.85rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 4, cursor: 'pointer', transition: 'all 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.borderColor = 'var(--ink)' }} onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--ink-muted)', minWidth: '80px' }}>{d.invoiceNumber ?? `${d.type?.toUpperCase()}`}</span>
+                        <span style={{ color: 'var(--ink-muted)', marginLeft: 12, minWidth: '60px' }}>{new Date(d.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                        <span style={{ marginLeft: 12 }}><Badge status={d.status} /></span>
+                        {d.total != null && <span style={{ marginLeft: 'auto', textAlign: 'right', minWidth: '80px' }} className="currency">{fmt(d.total)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : null
       ))}
     </div>
   )
@@ -1733,11 +1741,13 @@ export default function Documents({ store, initialSelectedId, onNav }) {
 
   const { documents, clients, projects } = store
 
-  const totalDocs = documents.length
+  // Stats calculations
+  const quotes = documents.filter(d => d.type === 'quote')
   const invoices = documents.filter(d => d.type === 'invoice')
-  const outstanding = invoices.filter(d => ['draft', 'sent'].includes(d.status))
-  const outstandingValue = outstanding.reduce((s, d) => s + (d.total ?? 0), 0)
-  const collected = invoices.filter(d => d.status === 'paid').reduce((s, d) => s + (d.total ?? 0), 0)
+  const totalQuotesSent = quotes.filter(d => ['sent', 'approved'].includes(d.status)).length
+  const totalQuotesValue = quotes.reduce((s, d) => s + (d.total ?? 0), 0)
+  const invoicesOutstanding = invoices.filter(d => ['draft', 'sent'].includes(d.status))
+  const outstandingValue = invoicesOutstanding.reduce((s, d) => s + (d.total ?? 0), 0)
 
   const filtered = documents.filter(d => {
     const client = clients.find(c => c.id === d.clientId)
@@ -1777,20 +1787,20 @@ export default function Documents({ store, initialSelectedId, onNav }) {
 
       <div className="stat-grid">
         <div className="stat-card">
-          <span className="stat-label">Total Docs</span>
-          <span className="stat-value">{totalDocs}</span>
+          <span className="stat-label">Total Quotes Sent</span>
+          <span className="stat-value">{totalQuotesSent}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Total Quotes Value</span>
+          <span className="stat-value accent">{totalQuotesValue ? fmt(totalQuotesValue) : '—'}</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Invoices Outstanding</span>
-          <span className="stat-value">{outstanding.length}</span>
+          <span className="stat-value">{invoicesOutstanding.length}</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Outstanding Value</span>
           <span className="stat-value accent">{outstandingValue ? fmt(outstandingValue) : '—'}</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Total Collected</span>
-          <span className="stat-value">{collected ? fmt(collected) : '—'}</span>
         </div>
       </div>
 
@@ -1842,12 +1852,13 @@ export default function Documents({ store, initialSelectedId, onNav }) {
               <tbody>
                 {filtered.map(d => {
                   const client = clients.find(c => c.id === d.clientId)
+                  const clientBrand = client?.company || client?.name || '—'
                   const project = projects.find(p => p.id === d.projectId)
                   return (
                     <tr key={d.id} onClick={() => setSelectedId(d.id)}>
                       <td className="text-mono">{d.invoiceNumber ?? d.type?.toUpperCase()}</td>
                       <td><TypeBadge type={d.type} /></td>
-                      <td className="text-muted">{client?.name ?? '—'}</td>
+                      <td className="text-muted">{clientBrand}</td>
                       <td className="text-muted">{project?.name ?? d.projectName ?? '—'}</td>
                       <td><Badge status={d.status} /></td>
                       <td className="currency">{d.total != null ? fmt(d.total) : '—'}</td>
