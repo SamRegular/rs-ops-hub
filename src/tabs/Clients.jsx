@@ -15,6 +15,18 @@ function fmt(n) {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(n)
 }
 
+function fmtExVAT(total, vat) {
+  if (!total && total !== 0) return '—'
+  const exVAT = total && vat ? total - vat : total
+  const fmtd = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 0 }).format(exVAT)
+  return `${fmtd} + VAT`
+}
+
+function projectValue(p) {
+  if (p.paymentTranches?.length) return p.paymentTranches.reduce((s, t) => s + (Number(t.amount) || 0), 0)
+  return (p.phases ?? []).reduce((s, ph) => s + (Number(ph.value) || 0), 0)
+}
+
 function Badge({ stage }) {
   const key = (stage ?? '').toLowerCase().replace(/\s/g, '-')
   return <span className={`badge badge-${STAGE_COLORS[stage] ?? key}`}>{stage}</span>
@@ -118,8 +130,11 @@ function ClientDetail({ client, projects, documents, onBack, onEdit, onDelete, o
       </button>
       <div className="detail-header">
         <div>
-          <h1 className="detail-title">{client.name}</h1>
-          {client.company && <p className="detail-sub">{client.company}{client.role ? ` · ${client.role}` : ''}</p>}
+          <h1 className="detail-title">{client.company || client.name}</h1>
+          {client.company
+            ? <p className="detail-sub">{client.name}{client.role ? ` · ${client.role}` : ''}</p>
+            : client.role && <p className="detail-sub">{client.role}</p>
+          }
         </div>
         <div className="detail-actions">
           <button className="btn" onClick={onEdit}><Edit2 size={13} /> Edit</button>
@@ -190,7 +205,7 @@ function ClientDetail({ client, projects, documents, onBack, onEdit, onDelete, o
         : (
           <div className="linked-list" style={{ marginBottom: 32 }}>
             {clientProjects.map(p => {
-              const total = (p.phases ?? []).reduce((s, ph) => s + Number(ph.value || 0), 0)
+              const total = projectValue(p)
               return (
                 <div key={p.id} className="linked-item" onClick={() => onNav('projects', p.id)}>
                   <div>
@@ -198,7 +213,7 @@ function ClientDetail({ client, projects, documents, onBack, onEdit, onDelete, o
                     {p.projectType && <span className="text-muted" style={{ marginLeft: 8 }}>{p.projectType}</span>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {total > 0 && <span className="currency">{fmt(total)}</span>}
+                    {total > 0 && <span className="currency">{fmt(total)} + VAT</span>}
                     <Badge stage={p.status} />
                     <ExternalLink size={13} style={{ color: 'var(--ink-muted)' }} />
                   </div>
@@ -217,11 +232,13 @@ function ClientDetail({ client, projects, documents, onBack, onEdit, onDelete, o
             {clientDocs.map(d => (
               <div key={d.id} className="linked-item" onClick={() => onNav('documents', d.id)}>
                 <div>
-                  <span className="text-mono" style={{ marginRight: 10 }}>{d.invoiceNumber ?? d.type?.toUpperCase()}</span>
+                  <span className="text-mono" style={{ marginRight: 10 }}>
+                    {d.invoiceNumber ? `${d.invoiceNumber} /` : ''} {d.type?.toUpperCase()}
+                  </span>
                   <span style={{ fontWeight: 500 }}>{d.projectName ?? d.type}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {d.total && <span className="currency">{fmt(d.total)}</span>}
+                  {d.total != null && <span className="currency">{fmtExVAT(d.total, d.vat)}</span>}
                   <Badge stage={d.status} />
                   <ExternalLink size={13} style={{ color: 'var(--ink-muted)' }} />
                 </div>
@@ -364,8 +381,8 @@ export default function Clients({ store, onNav }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Company</th>
+                <th>Brand</th>
+                <th>Contact</th>
                 <th>Status</th>
                 <th>Sector</th>
                 <th>Source</th>
@@ -376,8 +393,8 @@ export default function Clients({ store, onNav }) {
             <tbody>
               {filtered.map(c => (
                 <tr key={c.id} onClick={() => setSelectedId(c.id)}>
-                  <td style={{ fontWeight: 500 }}>{c.name}</td>
-                  <td className="text-muted">{c.company || '—'}</td>
+                  <td style={{ fontWeight: 500 }}>{c.company || c.name}</td>
+                  <td className="text-muted">{c.company ? c.name : '—'}</td>
                   <td><span style={{ fontSize: '0.8rem', color: 'var(--ink-muted)' }}>{classifyClient(c.id)}</span></td>
                   <td className="text-muted">{c.sector || '—'}</td>
                   <td className="text-muted">{c.source || '—'}</td>
