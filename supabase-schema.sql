@@ -16,6 +16,16 @@ create table team_members (
   unique(team_id, user_id)
 );
 
+alter table team_members enable row level security;
+create policy "Users can see their own team membership"
+  on team_members for select using (user_id = auth.uid());
+create policy "Users can see team members in their team"
+  on team_members for select using (
+    team_id in (
+      select team_id from team_members where user_id = auth.uid()
+    )
+  );
+
 -- ─── Clients ────────────────────────────────────────────────────────────────
 
 create table clients (
