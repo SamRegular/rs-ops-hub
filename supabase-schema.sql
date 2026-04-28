@@ -82,6 +82,11 @@ create table projects (
   description text,
   "projectType" text,
   status text default 'Lead', -- Lead, Quoted, Confirmed, Active, Complete, Lost
+  "winChance" integer,
+  brief text,
+  "startDate" date,
+  deliverables jsonb default '[]'::jsonb,
+  "paymentTranches" jsonb default '[]'::jsonb,
   created_at timestamp default now(),
   updated_at timestamp default now()
 );
@@ -207,14 +212,29 @@ create table documents (
   team_id uuid not null references teams(id) on delete cascade,
   "clientId" uuid not null references clients(id) on delete cascade,
   "projectId" uuid references projects(id) on delete set null,
-  type text not null, -- 'quote', 'sow', 'invoice'
+  type text not null, -- 'quote', 'invoice'
   "invoiceNumber" text,
   "projectName" text,
-  status text default 'draft', -- draft, sent, accepted, paid, etc.
+  "phaseName" text,
+  status text default 'draft', -- draft, sent, approved, rejected, paid
   total numeric,
-  content text, -- markdown/HTML content
-  deliverables jsonb default '[]'::jsonb, -- stored as JSON array
-  "paymentTranches" jsonb default '[]'::jsonb, -- stored as JSON array
+  amount numeric,
+  vat numeric,
+  subtotal numeric,
+  currency text default 'GBP',
+  content text,
+  overview text,       -- quote intro paragraph
+  "workDescription" text, -- invoice description paragraph
+  deliverables jsonb default '[]'::jsonb,
+  "paymentTranches" jsonb default '[]'::jsonb,
+  "validUntil" text,
+  "validityDays" integer default 30,
+  "dueDate" date,
+  "startDate" date,
+  description text,
+  notes text,
+  "poNumber" text,
+  "paymentTerms" text,
   created_at timestamp default now(),
   updated_at timestamp default now()
 );
