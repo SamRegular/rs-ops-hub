@@ -53,3 +53,21 @@ export const PROJECT_TYPES = ['Brand Identity', 'Website', 'Campaign', 'Print', 
 export const INVOICE_STATUS = ['draft', 'sent', 'paid']
 export const QUOTE_STATUS = ['draft', 'sent', 'approved', 'rejected']
 export const DOC_TYPES = ['quote', 'sow', 'invoice']
+
+// Lead tracking
+export const LEAD_TEMPERATURES = ['Cold', 'Warm', 'Hot']
+export const NEXT_ACTIONS = ['call_booked', 'proposal_sent', 'sow_sent', 'waiting']
+export const NEXT_ACTION_LABELS = {
+  call_booked: 'Call Booked',
+  proposal_sent: 'Proposal Sent',
+  sow_sent: 'SOW Sent',
+  waiting: 'Waiting',
+}
+export const DOCUMENT_SENT_OPTIONS = ['Studio Credentials', 'Tailored Credentials', 'Process Document', 'Event Report', 'No Document']
+export const DOCUMENT_SENT_VALUES = {
+  'Studio Credentials': 'studio_credentials',
+  'Tailored Credentials': 'tailored_credentials',
+  'Process Document': 'process_document',
+  'Event Report': 'event_report',
+  'No Document': 'no_document',
+}

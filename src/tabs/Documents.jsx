@@ -306,9 +306,9 @@ function Letterhead({ doc, client }) {
       {client && (
         <div className="dp-client">
           <div className="dp-client-to">Prepared for</div>
-          <div className="dp-client-name">{client.name}</div>
-          {client.company && client.company !== client.name && (
-            <div className="dp-client-company">{client.company}</div>
+          <div className="dp-client-name">{client.company || client.name}</div>
+          {client.name && client.company && client.name !== client.company && (
+            <div className="dp-client-company">{client.name}{client.role ? ` · ${client.role}` : ''}</div>
           )}
           {client.address && <div className="dp-client-address">{client.address}</div>}
           {client.email && <div className="dp-client-address">{client.email}</div>}
@@ -553,8 +553,8 @@ function buildPrintHtml(doc, client, project) {
   const clientBlock = client ? `
     <div class="dp-client">
       <div class="dp-client-to">Prepared for</div>
-      <div class="dp-client-name">${esc(client.name)}</div>
-      ${client.company && client.company !== client.name ? `<div class="dp-client-company">${esc(client.company)}</div>` : ''}
+      <div class="dp-client-name">${esc(client.company || client.name)}</div>
+      ${client.name && client.company && client.name !== client.company ? `<div class="dp-client-company">${esc(client.name)}${client.role ? ` · ${esc(client.role)}` : ''}</div>` : ''}
       ${client.address ? `<div class="dp-client-address">${esc(client.address)}</div>` : ''}
       ${client.email ? `<div class="dp-client-address">${esc(client.email)}</div>` : ''}
     </div>` : ''

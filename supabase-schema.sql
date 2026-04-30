@@ -271,6 +271,7 @@ create table retainers (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references teams(id) on delete cascade,
   "clientId" uuid not null references clients(id) on delete cascade,
+  "projectId" uuid references projects(id) on delete set null,
   name text not null,
   description text,
   "monthlyFee" numeric not null,
@@ -307,6 +308,54 @@ create policy "Users can delete retainers in their team"
     )
   );
 
+-- ─── Leads (Prospects) ───────────────────────────────────────────────────────
+
+create table leads (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references teams(id) on delete cascade,
+  name text not null,
+  role text,
+  company text,
+  location text,
+  industry text,
+  source text,
+  temperature text default 'Cold', -- 'Hot', 'Warm', 'Cold'
+  details text,
+  estimated_value numeric,
+  next_action text, -- 'call_booked', 'proposal_sent', 'sow_sent', 'waiting'
+  next_action_date date,
+  document_sent text, -- 'studio_credentials', 'tailored_credentials', 'process_document', 'event_report', 'no_document'
+  notes text,
+  created_at timestamp default now(),
+  updated_at timestamp default now()
+);
+
+alter table leads enable row level security;
+create policy "Users can see leads in their team"
+  on leads for select using (
+    team_id in (
+      select team_id from team_members where user_id = auth.uid()
+    )
+  );
+create policy "Users can create leads in their team"
+  on leads for insert with check (
+    team_id in (
+      select team_id from team_members where user_id = auth.uid()
+    )
+  );
+create policy "Users can update leads in their team"
+  on leads for update using (
+    team_id in (
+      select team_id from team_members where user_id = auth.uid()
+    )
+  );
+create policy "Users can delete leads in their team"
+  on leads for delete using (
+    team_id in (
+      select team_id from team_members where user_id = auth.uid()
+    )
+  );
+
 -- ─── Indexes (for performance) ──────────────────────────────────────────────
 
 create index idx_clients_team_id on clients(team_id);
@@ -317,5 +366,9 @@ create index idx_documents_client_id on documents("clientId");
 create index idx_documents_project_id on documents("projectId");
 create index idx_retainers_team_id on retainers(team_id);
 create index idx_retainers_client_id on retainers("clientId");
+create index idx_retainers_project_id on retainers("projectId");
+create index idx_leads_team_id on leads(team_id);
+create index idx_leads_temperature on leads(temperature);
+create index idx_leads_next_action_date on leads(next_action_date);
 create index idx_team_members_user_id on team_members(user_id);
 create index idx_team_members_team_id on team_members(team_id);

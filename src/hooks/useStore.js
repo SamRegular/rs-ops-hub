@@ -14,15 +14,17 @@ export function useStore() {
   const [projects, setProjects] = useState([])
   const [documents, setDocuments] = useState([])
   const [retainers, setRetainers] = useState([])
+  const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
     try {
-      const [c, p, d, r] = await Promise.all([
+      const [c, p, d, r, l] = await Promise.all([
         storage.getAll('clients'),
         storage.getAll('projects'),
         storage.getAll('documents'),
         storage.getAll('retainers'),
+        storage.getAll('leads'),
       ])
 
       // Load payment tranches for each project
@@ -61,6 +63,7 @@ export function useStore() {
       setProjects(enrichedProjects)
       setDocuments(d)
       setRetainers(r)
+      setLeads(l)
       setLoading(false)
     } catch (err) {
       console.error('Error loading data:', err)
@@ -213,6 +216,32 @@ export function useStore() {
     setRetainers(prev => prev.filter(r => r.id !== id))
   }, [])
 
+  // ── Leads ────────────────────────────────────────────────────────────────
+  const createLead = useCallback(async (data) => {
+    const item = await storage.create('leads', data)
+    setLeads(prev => [...prev, item])
+    return item
+  }, [])
+
+  const updateLead = useCallback(async (id, data) => {
+    const item = await storage.update('leads', id, data)
+    setLeads(prev => prev.map(l => l.id === id ? item : l))
+    return item
+  }, [])
+
+  const deleteLead = useCallback(async (id) => {
+    await storage.delete('leads', id)
+    setLeads(prev => prev.filter(l => l.id !== id))
+  }, [])
+
+  const convertLead = useCallback(async (leadId, clientData) => {
+    // Create new client from lead data
+    const newClient = await createClient(clientData)
+    // Delete the lead
+    await deleteLead(leadId)
+    return newClient
+  }, [createClient, deleteLead])
+
   // ── Computed ─────────────────────────────────────────────────────────────
   const clientLTV = useCallback((clientId) => {
     // Total value of all Active projects for this client
@@ -253,13 +282,119 @@ export function useStore() {
     return nextInvoiceNumber(documents)
   }, [documents])
 
+  // ── Analytics Helpers ────────────────────────────────────────────────────
+  const getFinancialYearStart = useCallback(() => {
+    const today = new Date()
+    const currentYear = today.getFullYear()
+    const septFirst = new Date(currentYear, 8, 1) // Sept 1
+
+    if (today < septFirst) {
+      return new Date(currentYear - 1, 8, 1)
+    }
+    return septFirst
+  }, [])
+
+  const projectsInDateRange = useCallback((startDate, endDate) => {
+    return projects.filter(p => {
+      const created = new Date(p.created_at)
+      return created >= startDate && created <= endDate
+    })
+  }, [projects])
+
+  const revenueByMonth = useCallback((projectList) => {
+    const monthData = {}
+    projectList.forEach(p => {
+      if ((p.status === 'Active' || p.status === 'Complete') && p.paymentTranches) {
+        p.paymentTranches.forEach(t => {
+          const monthKey = t.month ? t.month.substring(0, 7) : null
+          if (monthKey) {
+            monthData[monthKey] = (monthData[monthKey] || 0) + (Number(t.amount) || 0)
+          }
+        })
+      }
+    })
+    return Object.entries(monthData).sort()
+  }, [])
+
+  const revenueByStatus = useCallback((projectList) => {
+    const statusData = {}
+    projectList.forEach(p => {
+      const value = projectTotalValue(p)
+      statusData[p.status] = (statusData[p.status] || 0) + value
+    })
+    return statusData
+  }, [projectTotalValue])
+
+  const revenueByIndustry = useCallback((projectList) => {
+    const industryData = {}
+    projectList.forEach(p => {
+      const client = clients.find(c => c.id === p.clientId)
+      const sector = client?.sector || 'Unknown'
+      const value = projectTotalValue(p)
+      if (!industryData[sector]) {
+        industryData[sector] = { value: 0, count: 0 }
+      }
+      industryData[sector].value += value
+      industryData[sector].count += 1
+    })
+    return industryData
+  }, [clients, projectTotalValue])
+
+  const leadSourcePerformance = useCallback(() => {
+    const sourceData = {}
+    leads.forEach(l => {
+      const source = l.source || 'Unknown'
+      if (!sourceData[source]) {
+        sourceData[source] = { total: 0, hot: 0 }
+      }
+      sourceData[source].total += 1
+      if (l.temperature === 'Hot') {
+        sourceData[source].hot += 1
+      }
+    })
+    return sourceData
+  }, [leads])
+
+  const clientLTVRanking = useCallback(() => {
+    const ranking = clients.map(c => {
+      const ltv = clientLTV(c.id)
+      return { id: c.id, name: c.company || c.name, ltv }
+    })
+    return ranking.sort((a, b) => b.ltv - a.ltv).slice(0, 10)
+  }, [clients, clientLTV])
+
+  const averageProjectFee = useCallback((projectList) => {
+    const withValue = projectList.filter(p => projectTotalValue(p) > 0)
+    if (withValue.length === 0) return 0
+    const total = withValue.reduce((s, p) => s + projectTotalValue(p), 0)
+    return total / withValue.length
+  }, [projectTotalValue])
+
+  const winRate = useCallback((projectList) => {
+    const nonDraft = projectList.filter(p => p.status !== 'Lead')
+    if (nonDraft.length === 0) return 0
+    const won = nonDraft.filter(p => p.status === 'Active' || p.status === 'Complete').length
+    return (won / nonDraft.length) * 100
+  }, [])
+
+  const leadConversionRate = useCallback(() => {
+    const total = leads.length
+    if (total === 0) return 0
+    const hot = leads.filter(l => l.temperature === 'Hot').length
+    return (hot / total) * 100
+  }, [leads])
+
   return {
-    clients, projects, documents, retainers, loading,
+    clients, projects, documents, retainers, leads, loading,
     createClient, updateClient, deleteClient,
     createProject, updateProject, deleteProject,
     createDocument, updateDocument, deleteDocument,
     createRetainer, updateRetainer, deleteRetainer,
+    createLead, updateLead, deleteLead, convertLead,
     clientLTV, projectTotalValue, getNextInvoiceNumber,
+    getFinancialYearStart, projectsInDateRange, revenueByMonth, revenueByStatus,
+    revenueByIndustry, leadSourcePerformance, clientLTVRanking, averageProjectFee,
+    winRate, leadConversionRate,
     reload,
   }
 }

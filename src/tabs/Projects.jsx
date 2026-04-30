@@ -203,7 +203,7 @@ function ProjectDetail({ project, clients, store, onBack, onEdit, onDelete, onNa
           <h1 className="detail-title">{project.name}</h1>
           {client && (
             <p className="detail-sub" style={{ cursor: 'pointer' }} onClick={() => onNav('clients', client.id)}>
-              {client.name}{client.company ? ` · ${client.company}` : ''}
+              {client.company || client.name}{client.name && client.company && client.name !== client.company ? ` · ${client.name}` : ''}
             </p>
           )}
         </div>
@@ -351,7 +351,7 @@ function StageDetailView({ stage, projects, clients, projectTotalValue, onBack, 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div>
                     <h3 style={{ margin: 0, fontWeight: 600, fontSize: '1rem' }}>{p.name}</h3>
-                    {client && <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>{client.name}{client.company ? ` · ${client.company}` : ''}</p>}
+                    {client && <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>{client.company || client.name}{client.name && client.company && client.name !== client.company ? ` · ${client.name}` : ''}</p>}
                   </div>
                   <span className="currency" style={{ fontWeight: 600, fontSize: '1rem' }}>{fmt(projTotal)}</span>
                 </div>

@@ -298,6 +298,9 @@ body {
 .badge-rejected { color: var(--stage-lost); }
 .badge-paused  { color: var(--stage-lost); }
 .badge-ended   { color: var(--stage-lost); }
+.badge-hot     { color: #E74C3C; }
+.badge-warm    { color: #F39C12; }
+.badge-cold    { color: var(--ink-muted); }
 
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .btn {

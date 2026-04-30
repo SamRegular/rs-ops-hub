@@ -14,10 +14,10 @@ function Badge({ status }) {
 }
 
 // ─── Retainer Form ────────────────────────────────────────────────────────────
-function RetainerForm({ initial = {}, clients, onSave, onClose }) {
+function RetainerForm({ initial = {}, clients, projects, onSave, onClose }) {
   const [form, setForm] = useState({
     clientId: '', description: '', monthlyFee: '',
-    invoiceDayOfMonth: 1, startDate: '', status: 'active',
+    invoiceDayOfMonth: 1, startDate: '', status: 'active', projectId: '',
     ...initial,
     monthlyFee: initial.monthlyFee ?? '',
   })
@@ -35,6 +35,15 @@ function RetainerForm({ initial = {}, clients, onSave, onClose }) {
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}{c.company ? ` — ${c.company}` : ''}</option>)}
           </select>
         </div>
+        {form.clientId && (
+          <div className="form-group" style={{ gridColumn: '1/-1' }}>
+            <label className="form-label">Project (optional)</label>
+            <select className="form-select" {...inp('projectId')}>
+              <option value="">— No specific project —</option>
+              {projects.filter(p => p.clientId === form.clientId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+        )}
         <div className="form-group" style={{ gridColumn: '1/-1' }}>
           <label className="form-label">Description *</label>
           <input className="form-input" {...inp('description')} placeholder="e.g. Social media management, Brand retainer…" />
@@ -72,7 +81,7 @@ function RetainerForm({ initial = {}, clients, onSave, onClose }) {
 }
 
 // ─── Generate Retainer Invoice Modal ─────────────────────────────────────────
-function GenerateRetainerInvoiceModal({ retainer, client, store, onClose, onCreated }) {
+function GenerateRetainerInvoiceModal({ retainer, client, project, store, onClose, onCreated }) {
   const toast = useToast()
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -99,6 +108,7 @@ function GenerateRetainerInvoiceModal({ retainer, client, store, onClose, onCrea
         invoiceNumber,
         clientId: client.id,
         retainerId: retainer.id,
+        projectId: project?.id || null,
         status: 'draft',
         content: result.content,
         amount: retainer.monthlyFee,
@@ -106,7 +116,7 @@ function GenerateRetainerInvoiceModal({ retainer, client, store, onClose, onCrea
         total: result.total,
         dueDate,
         description: `${retainer.description} — ${monthLabel}`,
-        projectName: `Retainer: ${retainer.description}`,
+        projectName: project ? project.name : `Retainer: ${retainer.description}`,
       })
       toast(`Invoice ${invoiceNumber} generated`, 'success')
       onCreated(doc)
@@ -177,7 +187,7 @@ export default function Retainers({ store, onNav }) {
   const [invoiceModal, setInvoiceModal] = useState(null)
   const [statusFilter, setStatusFilter] = useState('active')
 
-  const { clients, retainers, createRetainer, updateRetainer, deleteRetainer } = store
+  const { clients, projects, retainers, createRetainer, updateRetainer, deleteRetainer } = store
 
   const filtered = retainers.filter(r => !statusFilter || r.status === statusFilter)
 
@@ -268,6 +278,7 @@ export default function Retainers({ store, onNav }) {
               <thead>
                 <tr>
                   <th>Client</th>
+                  <th>Project</th>
                   <th>Description</th>
                   <th>Monthly Fee</th>
                   <th>Inc VAT</th>
@@ -280,9 +291,11 @@ export default function Retainers({ store, onNav }) {
               <tbody>
                 {filtered.map(r => {
                   const client = clients.find(c => c.id === r.clientId)
+                  const project = r.projectId ? projects.find(p => p.id === r.projectId) : null
                   return (
                     <tr key={r.id} style={{ cursor: 'default' }}>
-                      <td style={{ fontWeight: 500 }}>{client?.name ?? '—'}</td>
+                      <td style={{ fontWeight: 500 }}>{client?.company || client?.name ?? '—'}</td>
+                      <td className="text-muted">{project?.name ?? '—'}</td>
                       <td className="text-muted">{r.description}</td>
                       <td className="currency">{fmt(r.monthlyFee)}</td>
                       <td className="currency" style={{ color: 'var(--ink-muted)' }}>{fmt(r.monthlyFee * 1.2)}</td>
@@ -293,7 +306,12 @@ export default function Retainers({ store, onNav }) {
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button
                             className="btn btn-sm btn-ghost"
-                            onClick={() => { if (client) setInvoiceModal({ retainer: r, client }) }}
+                            onClick={() => {
+                              if (client) {
+                                const project = r.projectId ? projects.find(p => p.id === r.projectId) : null
+                                setInvoiceModal({ retainer: r, client, project })
+                              }
+                            }}
                             title="Generate invoice"
                           >
                             <Receipt size={12} />
@@ -335,6 +353,7 @@ export default function Retainers({ store, onNav }) {
           <RetainerForm
             initial={editRetainer ?? {}}
             clients={clients}
+            projects={projects}
             onSave={handleSave}
             onClose={() => { setShowForm(false); setEditRetainer(null) }}
           />
@@ -345,6 +364,7 @@ export default function Retainers({ store, onNav }) {
         <GenerateRetainerInvoiceModal
           retainer={invoiceModal.retainer}
           client={invoiceModal.client}
+          project={invoiceModal.project}
           store={store}
           onClose={() => setInvoiceModal(null)}
           onCreated={(doc) => { onNav('documents', doc.id); setInvoiceModal(null) }}
