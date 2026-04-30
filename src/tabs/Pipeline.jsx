@@ -4,10 +4,10 @@ import { Modal } from '../components/Modal.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { SOURCES, PROJECT_TYPES, SECTORS } from '../config/studio.js'
 
-const LEAD_STAGES = ['Lead', 'Quoted', 'Confirmed', 'Active']
+const LEAD_STAGES = ['Lead', 'Quoted', 'Confirmed', 'Active', 'Complete']
 
 const STAGE_COLORS = {
-  Lead: 'lead', Quoted: 'quoted', Confirmed: 'confirmed', Active: 'confirmed',
+  Lead: 'lead', Quoted: 'quoted', Confirmed: 'confirmed', Active: 'confirmed', Complete: 'complete',
 }
 
 const STAGE_HEX = {
@@ -15,6 +15,7 @@ const STAGE_HEX = {
   Quoted: '#60A5FA',
   Confirmed: '#34D399',
   Active: '#34D399',
+  Complete: '#A78BFA',
 }
 
 function fmt(n) {
