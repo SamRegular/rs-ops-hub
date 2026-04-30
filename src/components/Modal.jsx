@@ -1,17 +1,34 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
 export function Modal({ title, onClose, children, size = 'md', footer }) {
+  const isSelectingRef = useRef(false)
+
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
+  useEffect(() => {
+    const handleMouseDown = () => {
+      isSelectingRef.current = true
+    }
+    const handleMouseUp = () => {
+      isSelectingRef.current = false
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
   return (
     <div className="modal-overlay" onClick={(e) => {
-      // Don't close if user is selecting text
-      if (e.target === e.currentTarget && !window.getSelection().toString()) {
+      // Don't close if user is selecting text or in the middle of a selection drag
+      if (e.target === e.currentTarget && !window.getSelection().toString() && !isSelectingRef.current) {
         onClose()
       }
     }}>
