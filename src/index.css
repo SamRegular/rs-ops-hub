@@ -413,6 +413,9 @@ body {
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
   width: 100%;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
 }
 
 .form-input:focus,
@@ -459,6 +462,7 @@ body {
   justify-content: center;
   padding: 40px 24px;
   overflow-y: auto;
+  touch-action: none;
 }
 
 .modal {

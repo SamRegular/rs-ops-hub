@@ -9,7 +9,12 @@ export function Modal({ title, onClose, children, size = 'md', footer }) {
   }, [onClose])
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    <div className="modal-overlay" onClick={(e) => {
+      // Don't close if user is selecting text
+      if (e.target === e.currentTarget && !window.getSelection().toString()) {
+        onClose()
+      }
+    }}>
       <div className={`modal${size === 'lg' ? ' modal-lg' : ''}`} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <span className="modal-title">{title}</span>
