@@ -2,8 +2,7 @@
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
-  environment = ["VITE_SUPABASE_URL", "VITE_SUPABASE_ANON_KEY", "ANTHROPIC_API_KEY", "VITE_APP_PASSWORD"]
-
+  
 [[redirects]]
   from = "/*"
   to = "/index.html"
