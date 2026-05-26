@@ -1,5 +1,5 @@
 [build]
-  command = "  command = "bash build.sh"
+  command = "bash build.sh"
   publish = "dist"
   functions = "netlify/functions"
   
