@@ -35,7 +35,7 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
   useEffect(() => {
     if (quote) {
       setDays(quote.days)
-      setSelectedClientId(quote.clientId)
+      setSelectedClientId(quote.client_id)
       setJobDesc(quote.job)
       setShowNewClient(false)
       setNewClientName('')
@@ -70,14 +70,14 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
       alert('Add at least one day'); return
     }
 
-    let clientId = selectedClientId
+    let client_id = selectedClientId
     if (showNewClient) {
       const newClient = await onCreateClient({ name: newClientName.trim() })
-      clientId = newClient.id
+      client_id = newClient.id
     }
 
     onSave({
-      clientId,
+      client_id,
       job: jobDesc || 'No description',
       days: { ...days },
       projectFee: fee,
@@ -164,7 +164,7 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
 function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onConvertToProject, onRevise }) {
   if (!isOpen || !quote) return null
 
-  const client = clients.find(c => c.id === quote.clientId)
+  const client = clients.find(c => c.id === quote.client_id)
   const current = quote.revision || quote
   const hasRevisions = quote.revisions && quote.revisions.length > 0
 
@@ -292,7 +292,7 @@ export default function Quotes({ store, onNav }) {
   }
 
   async function handleConvertToProject(quote) {
-    const client = store.clients.find(c => c.id === quote.clientId)
+    const client = store.clients.find(c => c.id === quote.client_id)
     if (!client) {
       toast('Client not found', 'error')
       return
@@ -301,7 +301,7 @@ export default function Quotes({ store, onNav }) {
     try {
       const project = await store.createProject({
         name: `${quote.job} — ${quote.date}`,
-        clientId: quote.clientId,
+        client_id: quote.client_id,
         status: 'Quoted',
         value: quote.grand,
         description: quote.job,
@@ -433,7 +433,7 @@ export default function Quotes({ store, onNav }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtered.map(q => {
               const isExpanded = expandedId === q.id
-              const client = store.clients.find(c => c.id === q.clientId)
+              const client = store.clients.find(c => c.id === q.client_id)
               const current = q.revision || q
               return (
                 <div key={q.id} className="card" style={{ borderLeft: `3px solid ${q.status === 'waiting' ? '#E09B3D' : q.status === 'signed' ? '#4CAF78' : '#E06C6C'}` }}>
