@@ -309,7 +309,7 @@ export default function Quotes({ store, onNav }) {
       const project = await store.createProject({
         name: `${quote.job} — ${quote.date}`,
         clientId: quote.clientId,
-        status: 'Active',
+        status: 'Quoted',
         value: quote.grand,
         description: quote.job,
         quoteId: quote.id
@@ -483,9 +483,17 @@ export default function Quotes({ store, onNav }) {
                             </div>
                           )
                         })}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)', paddingTop: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                          <span>Project fee</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.projectFee)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
+                          <span>PM (12.5%)</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                           <span>Total</span>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{fmt(current.grand)}</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand)}</span>
                         </div>
                       </div>
 
