@@ -92,7 +92,7 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
 
   if (!isOpen) return null
 
-  const { fee, pm, grand } = calcTotals(days)
+  const { fee, pm, project_fee, vat, grand } = calcTotals(days)
   const selectedClient = clients.find(c => c.id === selectedClientId)
 
   return (
@@ -144,13 +144,13 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
             <span style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>PM (12.5%)</span>
             <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(pm)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>Project fee</span>
-            <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(fee)}</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(project_fee)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
             <span style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>VAT (20%)</span>
-            <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(pm ? grand - (fee + pm) : 0)}</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(vat)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--accent-dim)' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--accent)' }}>Total (inc VAT)</span>
