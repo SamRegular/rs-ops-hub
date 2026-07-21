@@ -263,7 +263,15 @@ export default function Clients({ store, onNav }) {
 
   const { clients, projects, documents, createClient, updateClient, deleteClient, clientLTV } = store
 
-  // Classify clients by their project statuses
+  // Filter clients by search and sector only
+  const filtered = clients.filter(c => {
+    const q = search.toLowerCase()
+    const matches = !q || [c.name, c.company, c.email, c.role].some(v => v?.toLowerCase().includes(q))
+    const sectorOk = !sectorFilter || c.sector === sectorFilter
+    return matches && sectorOk
+  })
+
+  // Classify clients for display purposes only
   const classifyClient = (clientId) => {
     const clientProjects = projects.filter(p => p.clientId === clientId)
     const statuses = clientProjects.map(p => p.status)
@@ -272,16 +280,6 @@ export default function Clients({ store, onNav }) {
     if (statuses.some(s => ['Lead'].includes(s))) return 'Leads'
     return 'Previous'
   }
-
-  // Only show Existing and Previous clients — Leads are tracked in Pipeline
-  const filtered = clients.filter(c => {
-    const classification = classifyClient(c.id)
-    if (classification === 'Leads') return false
-    const q = search.toLowerCase()
-    const matches = !q || [c.name, c.company, c.email, c.role].some(v => v?.toLowerCase().includes(q))
-    const sectorOk = !sectorFilter || c.sector === sectorFilter
-    return matches && sectorOk
-  })
 
   const selected = clients.find(c => c.id === selectedId)
 
