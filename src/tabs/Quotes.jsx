@@ -80,7 +80,7 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
       client_id,
       job: jobDesc || 'No description',
       days: { ...days },
-      projectFee: fee,
+      project_fee: fee,
       pm,
       grand
     })
@@ -196,7 +196,7 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
             })}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
               <span>Project fee</span>
-              <span style={{ fontFamily: 'monospace' }}>{fmt(current.projectFee)}</span>
+              <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
               <span>PM (12.5%)</span>
@@ -480,7 +480,7 @@ export default function Quotes({ store, onNav }) {
                         })}
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                           <span>Project fee</span>
-                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.projectFee)}</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
                           <span>PM (12.5%)</span>
