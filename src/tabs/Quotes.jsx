@@ -470,7 +470,8 @@ export default function Quotes({ store, onNav }) {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', marginLeft: 10, flexShrink: 0 }}>
-                      <div style={{ fontFamily: 'monospace', fontSize: '0.875rem', fontWeight: 600, color: 'var(--accent)' }}>{fmt(current.grand)}</div>
+                      <div style={{ fontFamily: 'monospace', fontSize: '0.875rem', fontWeight: 600, color: 'var(--accent)' }}>{fmtK(current.project_fee)}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', marginTop: 2 }}>+ VAT</div>
                       <div style={{ fontSize: '0.7rem', marginTop: 4 }}>{isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                     </div>
                   </div>
