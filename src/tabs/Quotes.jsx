@@ -51,7 +51,9 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
   function calcTotals(d) {
     const fee = Object.entries(RATES).reduce((s, [r, rate]) => s + d[r] * rate, 0)
     const pm = fee * 0.125
-    return { fee, pm, grand: fee + pm }
+    const subtotal = fee + pm
+    const vat = subtotal * 0.20
+    return { fee, pm, subtotal, vat, grand: subtotal + vat }
   }
 
   function adj(role, delta) {
@@ -145,8 +147,16 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
             <span style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>PM (12.5%)</span>
             <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(pm)}</span>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)', color: 'var(--ink-muted)' }}>
+            <span style={{ fontSize: '0.85rem' }}>Subtotal</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(fee + pm)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--ink-muted)' }}>VAT (20%)</span>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{fmt(pm ? grand - (fee + pm) : 0)}</span>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--accent-dim)' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--accent)' }}>Total</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--accent)' }}>Total (inc VAT)</span>
             <span style={{ fontFamily: 'monospace', fontSize: '1.25rem', fontWeight: 600, color: 'var(--accent)' }}>{fmt(grand)}</span>
           </div>
         </div>
@@ -202,8 +212,16 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
               <span>PM (12.5%)</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
+              <span>Subtotal</span>
+              <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee + current.pm)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
+              <span>VAT (20%)</span>
+              <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - (current.project_fee + current.pm))}</span>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--accent-dim)', fontWeight: 600 }}>
-              <span>Total</span>
+              <span>Total (inc VAT)</span>
               <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{fmt(current.grand)}</span>
             </div>
           </div>
@@ -482,12 +500,20 @@ export default function Quotes({ store, onNav }) {
                           <span>Project fee</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)' }}>
                           <span>PM (12.5%)</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
                         </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)' }}>
+                          <span>Subtotal</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee + current.pm)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
+                          <span>VAT (20%)</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - (current.project_fee + current.pm))}</span>
+                        </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-                          <span>Total</span>
+                          <span>Total (inc VAT)</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand)}</span>
                         </div>
                       </div>
