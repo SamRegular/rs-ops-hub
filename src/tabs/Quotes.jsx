@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast.jsx'
 
 function fmt(n) {
   if (!n && n !== 0) return '—'
-  return '£' + Math.round(n).toLocaleString('en-GB')
+  return '£' + (Math.round(n * 100) / 100).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function fmtK(n) {
