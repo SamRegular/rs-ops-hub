@@ -20,14 +20,21 @@ export function useStore() {
 
   const reload = useCallback(async () => {
     try {
-      const [c, p, d, r, l, q] = await Promise.all([
+      const [c, p, d, r, l] = await Promise.all([
         storage.getAll('clients'),
         storage.getAll('projects'),
         storage.getAll('documents'),
         storage.getAll('retainers'),
         storage.getAll('leads'),
-        storage.getAll('quotes'),
       ])
+
+      // Load quotes separately (table may not exist yet)
+      let q = []
+      try {
+        q = await storage.getAll('quotes')
+      } catch (quoteErr) {
+        console.warn('Quotes table not found, skipping:', quoteErr.message)
+      }
 
       // Load payment tranches for each project
       const supabase = storage.supabase
@@ -69,7 +76,7 @@ export function useStore() {
       setQuotes(q)
       setLoading(false)
     } catch (err) {
-      console.error('Error loading data:', err)
+      console.error('Error loading data:', err?.message || err)
       setLoading(false)
     }
   }, [])
