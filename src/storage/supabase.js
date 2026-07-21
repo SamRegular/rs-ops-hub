@@ -25,9 +25,27 @@ const TABLE_NAMES = {
 
 // Get current user's team ID
 async function getTeamId() {
-  // TEMPORARY: Hardcoded team_id for testing
-  // TODO: Fix proper team lookup later (team_members query not working)
-  return 'efe2dda9-ad08-4675-b455-00f885b1a73b'
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) throw new Error('Not authenticated')
+
+    // Query team_members for this user
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (error) {
+      console.error('Error fetching user team:', error)
+      throw error
+    }
+
+    return data.team_id
+  } catch (err) {
+    console.error('getTeamId error:', err)
+    throw new Error('Could not determine user team. Please contact support.')
+  }
 }
 
 // Convert field names from camelCase to quoted identifiers for SQL
