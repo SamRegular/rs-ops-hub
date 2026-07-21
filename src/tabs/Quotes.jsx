@@ -51,9 +51,9 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
   function calcTotals(d) {
     const fee = Object.entries(RATES).reduce((s, [r, rate]) => s + d[r] * rate, 0)
     const pm = fee * 0.125
-    const subtotal = fee + pm
-    const vat = subtotal * 0.20
-    return { fee, pm, subtotal, vat, grand: subtotal + vat }
+    const project_fee = fee + pm
+    const vat = project_fee * 0.20
+    return { fee, pm, project_fee, vat, grand: project_fee + vat }
   }
 
   function adj(role, delta) {
@@ -78,13 +78,14 @@ function QuoteFormModal({ isOpen, onClose, quote, clients, onSave, onCreateClien
       client_id = newClient.id
     }
 
+    const totals = calcTotals(days)
     onSave({
       client_id,
       job: jobDesc || 'No description',
       days: { ...days },
-      project_fee: fee,
-      pm,
-      grand
+      project_fee: totals.project_fee,
+      pm: totals.pm,
+      grand: totals.grand
     })
     onClose()
   }
@@ -200,11 +201,11 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
                 </div>
               )
             })}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.875rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '2px solid var(--accent)', fontSize: '0.875rem' }}>
               <span>PM (12.5%)</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)', paddingTop: '12px', borderTop: '2px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)', paddingTop: '12px' }}>
               <span>Project fee</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
             </div>
@@ -488,11 +489,11 @@ export default function Quotes({ store, onNav }) {
                             </div>
                           )
                         })}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)', paddingBottom: 4, borderBottom: '2px solid var(--accent)' }}>
                           <span>PM (12.5%)</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4 }}>
                           <span>Project fee</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
                         </div>
