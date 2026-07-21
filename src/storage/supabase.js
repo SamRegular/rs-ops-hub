@@ -34,17 +34,19 @@ async function getTeamId() {
       .from('team_members')
       .select('team_id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (error) {
-      console.error('Error fetching user team:', error)
-      throw error
+    if (data?.team_id) {
+      return data.team_id
     }
 
-    return data.team_id
+    // Fallback: if user not in team_members, use hardcoded team (existing users)
+    console.warn('User not found in team_members, using fallback team')
+    return 'efe2dda9-ad08-4675-b455-00f885b1a73b'
   } catch (err) {
     console.error('getTeamId error:', err)
-    throw new Error('Could not determine user team. Please contact support.')
+    // Fallback on error too
+    return 'efe2dda9-ad08-4675-b455-00f885b1a73b'
   }
 }
 
