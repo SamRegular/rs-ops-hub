@@ -418,17 +418,17 @@ export default function Quotes({ store, onNav }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, marginBottom: 20, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{ padding: '12px 10px', borderRight: '1px solid var(--border)' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Quoted</div>
-          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length ? fmtK(total) : '£0'}</div>
+          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length ? fmt(total) : '£0.00'}</div>
           <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', marginTop: 2 }}>+ VAT</div>
         </div>
         <div style={{ padding: '12px 10px', borderRight: '1px solid var(--border)' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Signed</div>
-          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: '#4CAF78' }}>{signedTotal ? fmtK(signedTotal) : '£0'}</div>
+          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: '#4CAF78' }}>{signedTotal ? fmt(signedTotal) : '£0.00'}</div>
           <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', marginTop: 2 }}>+ VAT</div>
         </div>
         <div style={{ padding: '12px 10px', borderRight: '1px solid var(--border)' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Avg</div>
-          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length ? fmtK(avg) : '—'}</div>
+          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length ? fmt(avg) : '—'}</div>
         </div>
         <div style={{ padding: '12px 10px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Count</div>
