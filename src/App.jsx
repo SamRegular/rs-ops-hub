@@ -4,13 +4,10 @@ import { ToastProvider } from './components/Toast.jsx'
 import { Login } from './components/Login.jsx'
 import Clients from './tabs/Clients.jsx'
 import Projects from './tabs/Projects.jsx'
-import Documents from './tabs/Documents.jsx'
-import Pipeline from './tabs/Pipeline.jsx'
-import Leads from './tabs/Leads.jsx'
-import Data from './tabs/Data.jsx'
+import Quotes from './tabs/Quotes.jsx'
 import { storage } from './storage/index.js'
 
-const TABS = ['clients', 'projects', 'documents', 'pipeline', 'leads', 'data']
+const TABS = ['clients', 'projects', 'quotes']
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 function Nav({ active, onTab, onLogout }) {
@@ -112,10 +109,7 @@ export default function App() {
         <main className="content-area">
           {tab === 'clients'    && <Clients   store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'clients'} />}
           {tab === 'projects'   && <Projects  store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'projects'} />}
-          {tab === 'documents'  && <Documents store={augmentedStore} onNav={handleNav} initialSelectedId={targetId} key={targetId ?? 'documents'} />}
-          {tab === 'pipeline'   && <Pipeline  store={augmentedStore} onNav={handleNav} key='pipeline' />}
-          {tab === 'leads'      && <Leads     store={augmentedStore} onNav={handleNav} key='leads' />}
-          {tab === 'data'       && <Data      store={augmentedStore} key='data' />}
+          {tab === 'quotes'     && <Quotes    store={augmentedStore} onNav={handleNav} key='quotes' />}
         </main>
       </div>
     </ToastProvider>
