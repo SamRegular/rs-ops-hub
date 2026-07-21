@@ -211,7 +211,7 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', background: 'var(--surface)', color: 'var(--ink-muted)' }}>
               <span>VAT (20%)</span>
-              <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - (current.project_fee + current.pm))}</span>
+              <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - current.project_fee)}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--accent-dim)', fontWeight: 600 }}>
               <span>Total (inc VAT)</span>
@@ -502,7 +502,7 @@ export default function Quotes({ store, onNav }) {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)', padding: '4px 0', background: 'var(--surface)' }}>
                           <span>VAT (20%)</span>
-                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - (current.project_fee + current.pm))}</span>
+                          <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - current.project_fee)}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                           <span>Total (inc VAT)</span>
