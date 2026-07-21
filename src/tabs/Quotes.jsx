@@ -246,7 +246,6 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
 
 export default function Quotes({ store, onNav }) {
   const toast = useToast()
-  const [quotes, setQuotes] = useState([])
   const [currentFilter, setCurrentFilter] = useState('all')
   const [showForm, setShowForm] = useState(false)
   const [editingQuote, setEditingQuote] = useState(null)
@@ -255,36 +254,27 @@ export default function Quotes({ store, onNav }) {
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [revisingQuote, setRevisingQuote] = useState(null)
 
-  useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('rs_quotes') || '[]')
-    setQuotes(stored)
-  }, [])
-
-  function saveQuotes(updated) {
-    setQuotes(updated)
-    localStorage.setItem('rs_quotes', JSON.stringify(updated))
-  }
-
   async function handleSaveQuote(data) {
     const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    if (editingQuote) {
-      const updated = quotes.map(q => q.id === editingQuote.id ? { ...editingQuote, ...data, updated_at: today } : q)
-      saveQuotes(updated)
-      toast('Quote updated')
-    } else {
-      const newQuote = {
-        id: Date.now(),
-        ...data,
-        date: today,
-        status: 'waiting',
-        revisions: [],
-        created_at: today
+    try {
+      if (editingQuote) {
+        await store.updateQuote(editingQuote.id, { ...data, updated_at: today })
+        toast('Quote updated')
+      } else {
+        await store.createQuote({
+          ...data,
+          date: today,
+          status: 'waiting',
+          revisions: [],
+          created_at: today
+        })
+        toast('Quote created')
       }
-      saveQuotes([newQuote, ...quotes])
-      toast('Quote created')
+      setEditingQuote(null)
+      setShowForm(false)
+    } catch (e) {
+      toast(e.message, 'error')
     }
-    setEditingQuote(null)
-    setShowForm(false)
   }
 
   async function handleCreateClient(data) {
@@ -292,10 +282,13 @@ export default function Quotes({ store, onNav }) {
     return newClient
   }
 
-  function handleStatusChange(quoteId, status) {
-    const updated = quotes.map(q => q.id === quoteId ? { ...q, status } : q)
-    saveQuotes(updated)
-    toast(`Quote marked as ${status}`)
+  async function handleStatusChange(quoteId, status) {
+    try {
+      await store.updateQuote(quoteId, { status })
+      toast(`Quote marked as ${status}`)
+    } catch (e) {
+      toast(e.message, 'error')
+    }
   }
 
   async function handleConvertToProject(quote) {
@@ -328,34 +321,36 @@ export default function Quotes({ store, onNav }) {
     setShowForm(true)
   }
 
-  function handleSaveRevision(data) {
+  async function handleSaveRevision(data) {
     const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     const quote = revisingQuote
-    const updated = quotes.map(q => {
-      if (q.id === quote.id) {
-        const revisions = [...(q.revisions || []), { grand: q.grand, date: today }]
-        return { ...q, ...data, revisions, status: 'waiting' }
-      }
-      return q
-    })
-    saveQuotes(updated)
-    toast('Quote revised')
-    setRevisingQuote(null)
-    setShowForm(false)
+    try {
+      const revisions = [...(quote.revisions || []), { grand: quote.grand, date: today }]
+      await store.updateQuote(quote.id, { ...data, revisions, status: 'waiting' })
+      toast('Quote revised')
+      setRevisingQuote(null)
+      setShowForm(false)
+    } catch (e) {
+      toast(e.message, 'error')
+    }
   }
 
-  function deleteQuote(id) {
-    saveQuotes(quotes.filter(q => q.id !== id))
-    toast('Quote deleted')
+  async function deleteQuote(id) {
+    try {
+      await store.deleteQuote(id)
+      toast('Quote deleted')
+    } catch (e) {
+      toast(e.message, 'error')
+    }
   }
 
-  const filtered = currentFilter === 'all' ? quotes : quotes.filter(q => q.status === currentFilter)
+  const filtered = currentFilter === 'all' ? store.quotes : store.quotes.filter(q => q.status === currentFilter)
   const counts = { waiting: 0, signed: 0, denied: 0 }
-  quotes.forEach(q => { if (counts[q.status] !== undefined) counts[q.status]++ })
+  store.quotes.forEach(q => { if (counts[q.status] !== undefined) counts[q.status]++ })
 
-  const total = quotes.reduce((s, q) => s + q.grand, 0)
-  const signedTotal = quotes.filter(q => q.status === 'signed').reduce((s, q) => s + (q.revision ? q.revision.grand : q.grand), 0)
-  const avg = quotes.length ? total / quotes.length : 0
+  const total = store.quotes.reduce((s, q) => s + q.grand, 0)
+  const signedTotal = store.quotes.filter(q => q.status === 'signed').reduce((s, q) => s + (q.revision ? q.revision.grand : q.grand), 0)
+  const avg = store.quotes.length ? total / store.quotes.length : 0
 
   return (
     <div className="page-container">
@@ -403,7 +398,7 @@ export default function Quotes({ store, onNav }) {
                 whiteSpace: 'nowrap'
               }}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)} <span style={{ fontSize: '0.7rem' }}>({status === 'all' ? quotes.length : counts[status]})</span>
+              {status.charAt(0).toUpperCase() + status.slice(1)} <span style={{ fontSize: '0.7rem' }}>({status === 'all' ? store.quotes.length : counts[status]})</span>
             </button>
           ))}
         </div>
@@ -412,7 +407,7 @@ export default function Quotes({ store, onNav }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, marginBottom: 20, borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{ padding: '12px 10px', borderRight: '1px solid var(--border)' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Quoted</div>
-          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{quotes.length ? fmtK(total) : '£0'}</div>
+          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length ? fmtK(total) : '£0'}</div>
         </div>
         <div style={{ padding: '12px 10px', borderRight: '1px solid var(--border)' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Signed</div>
@@ -420,11 +415,11 @@ export default function Quotes({ store, onNav }) {
         </div>
         <div style={{ padding: '12px 10px', borderRight: '1px solid var(--border)' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Avg</div>
-          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{quotes.length ? fmtK(avg) : '—'}</div>
+          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length ? fmtK(avg) : '—'}</div>
         </div>
         <div style={{ padding: '12px 10px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--ink-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Count</div>
-          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{quotes.length}</div>
+          <div style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--accent)' }}>{store.quotes.length}</div>
         </div>
       </div>
 

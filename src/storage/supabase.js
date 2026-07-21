@@ -20,6 +20,7 @@ const TABLE_NAMES = {
   documents: 'documents',
   retainers: 'retainers',
   leads: 'leads',
+  quotes: 'quotes',
 }
 
 // Get current user's team ID

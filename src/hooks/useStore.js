@@ -15,16 +15,18 @@ export function useStore() {
   const [documents, setDocuments] = useState([])
   const [retainers, setRetainers] = useState([])
   const [leads, setLeads] = useState([])
+  const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
     try {
-      const [c, p, d, r, l] = await Promise.all([
+      const [c, p, d, r, l, q] = await Promise.all([
         storage.getAll('clients'),
         storage.getAll('projects'),
         storage.getAll('documents'),
         storage.getAll('retainers'),
         storage.getAll('leads'),
+        storage.getAll('quotes'),
       ])
 
       // Load payment tranches for each project
@@ -64,6 +66,7 @@ export function useStore() {
       setDocuments(d)
       setRetainers(r)
       setLeads(l)
+      setQuotes(q)
       setLoading(false)
     } catch (err) {
       console.error('Error loading data:', err)
@@ -242,6 +245,24 @@ export function useStore() {
     return newClient
   }, [createClient, deleteLead])
 
+  // ── Quotes ───────────────────────────────────────────────────────────────
+  const createQuote = useCallback(async (data) => {
+    const item = await storage.create('quotes', data)
+    setQuotes(prev => [...prev, item])
+    return item
+  }, [])
+
+  const updateQuote = useCallback(async (id, data) => {
+    const item = await storage.update('quotes', id, data)
+    setQuotes(prev => prev.map(q => q.id === id ? item : q))
+    return item
+  }, [])
+
+  const deleteQuote = useCallback(async (id) => {
+    await storage.delete('quotes', id)
+    setQuotes(prev => prev.filter(q => q.id !== id))
+  }, [])
+
   // ── Computed ─────────────────────────────────────────────────────────────
   const clientLTV = useCallback((clientId) => {
     // Total value of all Active projects for this client
@@ -385,12 +406,13 @@ export function useStore() {
   }, [leads])
 
   return {
-    clients, projects, documents, retainers, leads, loading,
+    clients, projects, documents, retainers, leads, quotes, loading,
     createClient, updateClient, deleteClient,
     createProject, updateProject, deleteProject,
     createDocument, updateDocument, deleteDocument,
     createRetainer, updateRetainer, deleteRetainer,
     createLead, updateLead, deleteLead, convertLead,
+    createQuote, updateQuote, deleteQuote,
     clientLTV, projectTotalValue, getNextInvoiceNumber,
     getFinancialYearStart, projectsInDateRange, revenueByMonth, revenueByStatus,
     revenueByIndustry, leadSourcePerformance, clientLTVRanking, averageProjectFee,
