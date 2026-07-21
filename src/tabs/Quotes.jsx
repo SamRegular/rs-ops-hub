@@ -201,15 +201,15 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
                 </div>
               )
             })}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '2px solid var(--accent)', fontSize: '0.875rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.875rem' }}>
               <span>PM (12.5%)</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)', paddingTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', background: 'var(--surface)', color: 'var(--ink-muted)' }}>
               <span>Project fee</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', background: 'var(--surface)', color: 'var(--ink-muted)' }}>
               <span>VAT (20%)</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - (current.project_fee + current.pm))}</span>
             </div>
@@ -489,15 +489,15 @@ export default function Quotes({ store, onNav }) {
                             </div>
                           )
                         })}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)', paddingBottom: 4, borderBottom: '2px solid var(--accent)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
                           <span>PM (12.5%)</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', padding: '4px 0', background: 'var(--surface)' }}>
                           <span>Project fee</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)', padding: '4px 0', background: 'var(--surface)' }}>
                           <span>VAT (20%)</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.grand - (current.project_fee + current.pm))}</span>
                         </div>
