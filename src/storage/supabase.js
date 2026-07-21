@@ -25,29 +25,9 @@ const TABLE_NAMES = {
 
 // Get current user's team ID
 async function getTeamId() {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) throw new Error('Not authenticated')
-
-    // Query team_members for this user
-    const { data, error } = await supabase
-      .from('team_members')
-      .select('team_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (data?.team_id) {
-      return data.team_id
-    }
-
-    // Fallback: if user not in team_members, use hardcoded team (existing users)
-    console.warn('User not found in team_members, using fallback team')
-    return 'efe2dda9-ad08-4675-b455-00f885b1a73b'
-  } catch (err) {
-    console.error('getTeamId error:', err)
-    // Fallback on error too
-    return 'efe2dda9-ad08-4675-b455-00f885b1a73b'
-  }
+  // TEMPORARY: Hardcoded team_id for testing
+  // TODO: Fix proper team lookup later (team_members query not working)
+  return 'efe2dda9-ad08-4675-b455-00f885b1a73b'
 }
 
 // Convert field names from camelCase to quoted identifiers for SQL
