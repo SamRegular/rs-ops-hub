@@ -200,11 +200,11 @@ function QuoteDetailModal({ isOpen, onClose, quote, clients, onStatusChange, onC
                 </div>
               )
             })}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.875rem', color: 'var(--ink-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.875rem' }}>
               <span>PM (12.5%)</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--ink-muted)', paddingTop: '12px', borderTop: '2px solid var(--border)' }}>
               <span>Project fee</span>
               <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
             </div>
@@ -488,11 +488,11 @@ export default function Quotes({ store, onNav }) {
                             </div>
                           )
                         })}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 4, color: 'var(--ink-muted)' }}>
                           <span>PM (12.5%)</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.pm)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: 2, color: 'var(--ink-muted)', paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                           <span>Project fee</span>
                           <span style={{ fontFamily: 'monospace' }}>{fmt(current.project_fee)}</span>
                         </div>
