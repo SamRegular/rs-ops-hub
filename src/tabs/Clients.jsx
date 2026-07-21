@@ -268,7 +268,8 @@ export default function Clients({ store, onNav }) {
     const clientProjects = projects.filter(p => p.clientId === clientId)
     const statuses = clientProjects.map(p => p.status)
     if (statuses.includes('Active')) return 'Existing'
-    if (statuses.some(s => ['Confirmed', 'Quoted', 'Lead'].includes(s))) return 'Leads'
+    if (statuses.includes('Quoted') || statuses.includes('Confirmed')) return 'Existing'
+    if (statuses.some(s => ['Lead'].includes(s))) return 'Leads'
     return 'Previous'
   }
 
