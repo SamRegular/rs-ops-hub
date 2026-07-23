@@ -312,7 +312,7 @@ export default function Quotes({ store, onNav }) {
     try {
       const project = await store.createProject({
         name: `${quote.job} — ${quote.date}`,
-        client_id: quote.client_id,
+        clients: quote.client_id,
         status: 'Quoted',
         value: quote.grand,
         description: quote.job,
