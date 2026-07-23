@@ -359,8 +359,8 @@ export default function Quotes({ store, onNav }) {
   const counts = { waiting: 0, signed: 0, denied: 0 }
   store.quotes.forEach(q => { if (counts[q.status] !== undefined) counts[q.status]++ })
 
-  const total = store.quotes.reduce((s, q) => s + q.grand, 0)
-  const signedTotal = store.quotes.filter(q => q.status === 'signed').reduce((s, q) => s + (q.revision ? q.revision.grand : q.grand), 0)
+  const total = store.quotes.reduce((s, q) => s + q.project_fee, 0)
+  const signedTotal = store.quotes.filter(q => q.status === 'signed').reduce((s, q) => s + q.project_fee, 0)
   const avg = store.quotes.length ? total / store.quotes.length : 0
 
   return (
