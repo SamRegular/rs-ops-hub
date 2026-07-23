@@ -315,8 +315,7 @@ export default function Quotes({ store, onNav }) {
         clientId: quote.client_id,
         status: 'Quoted',
         value: quote.grand,
-        description: quote.job,
-        quoteId: quote.id
+        description: quote.job
       })
       handleStatusChange(quote.id, 'signed')
       setShowDetailModal(false)
